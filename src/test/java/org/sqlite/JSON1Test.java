@@ -8,6 +8,8 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -16,6 +18,12 @@ import org.junit.jupiter.api.Test;
  * @see <a href="http://sqlite.org/json1.html">http://sqlite.org/json1.html</a>
  */
 public class JSON1Test {
+
+    @BeforeEach
+    public void loadDriver() throws ClassNotFoundException
+    {
+        LoadDriver.load();
+    }
 
     public Connection getConnection() throws SQLException {
         return DriverManager.getConnection("jdbc:sqlite::memory:");

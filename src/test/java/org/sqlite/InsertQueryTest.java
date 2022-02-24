@@ -26,6 +26,7 @@ public class InsertQueryTest {
 
     @BeforeEach
     public void setUp() throws Exception {
+        LoadDriver.load();
         File tmpFile = File.createTempFile("tmp-sqlite", ".db");
         tmpFile.deleteOnExit();
         dbName = tmpFile.getAbsolutePath();

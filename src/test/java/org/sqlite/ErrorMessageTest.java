@@ -13,9 +13,17 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class ErrorMessageTest {
+
+    @BeforeEach
+    public void loadDriver() throws ClassNotFoundException
+    {
+        LoadDriver.load();
+    }
+
     static class VendorCodeMatcher extends BaseMatcher<Object> {
         final SQLiteErrorCode expected;
 

@@ -18,6 +18,7 @@ public class BusyHandlerTest {
 
     @BeforeEach
     public void connect() throws Exception {
+        LoadDriver.load();
         conn = DriverManager.getConnection("jdbc:sqlite:target/test.db");
         stat = conn.createStatement();
     }
@@ -84,7 +85,7 @@ public class BusyHandlerTest {
                 conn,
                 new BusyHandler() {
                     @Override
-                    protected int callback(int nbPrevInvok) throws SQLException {
+                    public int callback(int nbPrevInvok) throws SQLException {
                         assertEquals(nbPrevInvok, calls[0]);
                         calls[0]++;
 
@@ -121,7 +122,7 @@ public class BusyHandlerTest {
                 conn,
                 new BusyHandler() {
                     @Override
-                    protected int callback(int nbPrevInvok) throws SQLException {
+                    public int callback(int nbPrevInvok) throws SQLException {
                         assertEquals(nbPrevInvok, calls[0]);
                         calls[0]++;
 

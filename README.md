@@ -1,4 +1,18 @@
-SQLite JDBC Driver [![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/xerial/sqlite-jdbc/CI/master)](https://github.com/xerial/sqlite-jdbc/actions/workflows/test.yml?query=branch%3Amaster) [![Join the chat at https://gitter.im/xerial/sqlite-jdbc](https://badges.gitter.im/xerial/sqlite-jdbc.svg)](https://gitter.im/xerial/sqlite-jdbc?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+SQLite JDBC Driver [![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/xerial/sqlite-jdbc/CI/master)](https://github.com/xerial/sqlite-jdbc/actions/workflows/test.yml?query=branch%3Amaster) 
+==================
+
+The intention of this fork is to run the JDBC driver using the Panama API's rather than JNI.
+As such, this version of the library requires Java 17. At the moment, only the SQLite library
+for Window x64 and x84 are included at appear to work. 
+
+Known issues:
+1. The Panama API only works for Windows
+2. SQLite functions are not working. SQL that does not require functions work.
+3. You must call **Class.forName("org.sqlite.JDBC");** (something about making the jar a module stopped auto loading the driver.) 
+
+My testing with simple select statements so far has shown that this version is about 2x faster
+than the standard JNI version.
+
 ==================
 
 SQLite JDBC is a library for accessing and creating [SQLite](http://sqlite.org) database files in Java.
@@ -8,8 +22,8 @@ our sqlite-jdbc library, then append the library (JAR file) to your class path.
 
 See [the sample code](#usage).
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.xerial/sqlite-jdbc/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.xerial/sqlite-jdbc/)
-[![javadoc](https://javadoc.io/badge2/org.xerial/sqlite-jdbc/javadoc.svg)](https://javadoc.io/doc/org.xerial/sqlite-jdbc)
+[comment]: <> ([![Maven Central]&#40;https://maven-badges.herokuapp.com/maven-central/org.xerial/sqlite-jdbc/badge.svg&#41;]&#40;https://maven-badges.herokuapp.com/maven-central/org.xerial/sqlite-jdbc/&#41;)
+[comment]: <> ([![javadoc]&#40;https://javadoc.io/badge2/org.xerial/sqlite-jdbc/javadoc.svg&#41;]&#40;https://javadoc.io/doc/org.xerial/sqlite-jdbc&#41;)
 
 * Release versions: [Download](https://github.com/xerial/sqlite-jdbc/releases) or Maven https://oss.sonatype.org/content/repositories/releases/org/xerial/sqlite-jdbc/
 * Latest snapshot (pre-release) versions are also available: https://oss.sonatype.org/content/repositories/snapshots/org/xerial/sqlite-jdbc/

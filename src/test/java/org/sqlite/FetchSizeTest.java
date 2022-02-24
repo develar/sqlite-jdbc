@@ -23,6 +23,7 @@ public class FetchSizeTest {
 
     @BeforeEach
     public void connect() throws Exception {
+        LoadDriver.load();
         conn = DriverManager.getConnection("jdbc:sqlite:");
     }
 

@@ -31,6 +31,7 @@ import org.sqlite.date.FastDateFormat;
 
 public class QueryTest {
     public Connection getConnection() throws SQLException {
+        try {LoadDriver.load();}catch (ClassNotFoundException ex) {ex.printStackTrace();}
         return DriverManager.getConnection("jdbc:sqlite::memory:");
     }
 

@@ -18,6 +18,7 @@ public class ExtensionTest {
 
     @BeforeEach
     public void setUp() throws Exception {
+        LoadDriver.load();
         conn = DriverManager.getConnection("jdbc:sqlite:");
         stat = conn.createStatement();
     }

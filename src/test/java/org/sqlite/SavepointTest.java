@@ -39,6 +39,7 @@ public class SavepointTest {
 
     @BeforeEach
     public void connect() throws Exception {
+        LoadDriver.load();
         File tmpFile = File.createTempFile("test-trans", ".db");
         // tmpFile.deleteOnExit();
 

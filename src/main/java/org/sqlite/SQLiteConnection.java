@@ -16,6 +16,7 @@ import java.util.concurrent.Executor;
 import org.sqlite.core.CoreDatabaseMetaData;
 import org.sqlite.core.DB;
 import org.sqlite.core.NativeDB;
+import org.sqlite.core.PanamaDBImpl;
 import org.sqlite.jdbc4.JDBC4DatabaseMetaData;
 
 /** */
@@ -251,8 +252,13 @@ public abstract class SQLiteConnection implements Connection {
         // load the native DB
         DB db = null;
         try {
-            NativeDB.load();
-            db = new NativeDB(url, fileName, config);
+            var type = SQLiteJDBCLoader.initialize();
+            if (type == SQLiteJDBCLoader.NativeType.JNI)
+                db = new NativeDB(url, fileName, config);
+            else {
+                PanamaDBImpl.load();
+                db = new PanamaDBImpl(url, fileName, config);
+            }
         } catch (Exception e) {
             SQLException err = new SQLException("Error opening connection");
             err.initCause(e);

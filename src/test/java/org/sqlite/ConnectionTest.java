@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -24,6 +25,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.sqlite.SQLiteConfig.JournalMode;
 import org.sqlite.SQLiteConfig.Pragma;
@@ -34,6 +37,12 @@ import org.sqlite.SQLiteConfig.SynchronousMode;
  */
 public class ConnectionTest {
 
+    @BeforeEach
+    public void loadDriver() throws ClassNotFoundException
+    {
+        LoadDriver.load();
+    }
+
     @Test
     public void isValid() throws SQLException {
         Connection conn = DriverManager.getConnection("jdbc:sqlite:");
@@ -43,7 +52,7 @@ public class ConnectionTest {
     }
 
     @Test
-    public void executeUpdateOnClosedDB() throws SQLException {
+    public void executeUpdateOnClosedDB() throws SQLException,ClassNotFoundException {
         Connection conn = DriverManager.getConnection("jdbc:sqlite:");
         Statement stat = conn.createStatement();
         conn.close();

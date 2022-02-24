@@ -20,7 +20,7 @@ public class ListenerTest {
     public void connect() throws Exception {
         File tmpFile = File.createTempFile("test-listeners", ".db");
         tmpFile.deleteOnExit();
-
+        LoadDriver.load();
         connectionOne =
                 (SQLiteConnection)
                         DriverManager.getConnection("jdbc:sqlite:" + tmpFile.getAbsolutePath());

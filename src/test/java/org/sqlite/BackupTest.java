@@ -18,17 +18,26 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class BackupTest {
 
+    @BeforeEach
+    public void loadDriver() throws ClassNotFoundException
+    {
+        LoadDriver.load();
+    }
+
     @Test
-    public void backupAndRestore() throws SQLException, IOException {
+    public void backupAndRestore() throws SQLException, IOException, ClassNotFoundException {
         // create a memory database
         File tmpFile = File.createTempFile("backup-test", ".sqlite");
         tmpFile.deleteOnExit();
 
         // memory DB to file
+        LoadDriver.load();
         Connection conn = DriverManager.getConnection("jdbc:sqlite:");
         Statement stmt = conn.createStatement();
         stmt.executeUpdate("create table sample(id, name)");

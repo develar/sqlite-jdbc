@@ -23,11 +23,19 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import javax.sql.ConnectionPoolDataSource;
 import javax.sql.PooledConnection;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.sqlite.javax.SQLiteConnectionPoolDataSource;
 
 public class SQLiteConnectionPoolDataSourceTest {
+
+    @BeforeEach
+    public void loadDriver() throws ClassNotFoundException
+    {
+        LoadDriver.load();
+    }
 
     @Test
     public void connectionTest() throws SQLException {

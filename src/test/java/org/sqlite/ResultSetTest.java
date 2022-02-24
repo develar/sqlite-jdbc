@@ -22,6 +22,7 @@ public class ResultSetTest {
 
     @BeforeEach
     public void connect() throws Exception {
+        LoadDriver.load();
         conn = DriverManager.getConnection("jdbc:sqlite:");
         stat = conn.createStatement();
         stat.executeUpdate(

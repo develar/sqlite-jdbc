@@ -27,6 +27,7 @@ package org.sqlite;
 import java.io.*;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.file.Path;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -52,18 +53,28 @@ public class SQLiteJDBCLoader {
 
     private static boolean extracted = false;
 
+    enum NativeType {PANAMA, JNI}
+    public static Path extractedLibraryName;
+
     /**
      * Loads SQLite native JDBC library.
      *
      * @return True if SQLite native library is successfully loaded; false otherwise.
      */
-    public static synchronized boolean initialize() throws Exception {
+    public static synchronized NativeType initialize() throws Exception {
         // only cleanup before the first extract
         if (!extracted) {
             cleanup();
         }
-        loadSQLiteNativeLibrary();
-        return extracted;
+        try {
+            loadSQLiteNativeLibrary("sqlite3");
+            return NativeType.PANAMA;
+        }
+        catch (Exception ex)
+        {
+            loadSQLiteNativeLibrary("sqlitejdbc");
+        }
+        return NativeType.JNI;
     }
 
     private static File getTempDir() {
@@ -250,6 +261,8 @@ public class SQLiteJDBCLoader {
                     }
                 }
             }
+            //todo
+            extractedLibraryName = Path.of(targetFolder, extractedLibFileName);
             return loadNativeLibrary(targetFolder, extractedLibFileName);
         } catch (IOException e) {
             e.printStackTrace();
@@ -315,7 +328,7 @@ public class SQLiteJDBCLoader {
      *
      * @throws
      */
-    private static void loadSQLiteNativeLibrary() throws Exception {
+    private static void loadSQLiteNativeLibrary(String libName) throws Exception {
         if (extracted) {
             return;
         }
@@ -326,7 +339,7 @@ public class SQLiteJDBCLoader {
         String sqliteNativeLibraryPath = System.getProperty("org.sqlite.lib.path");
         String sqliteNativeLibraryName = System.getProperty("org.sqlite.lib.name");
         if (sqliteNativeLibraryName == null) {
-            sqliteNativeLibraryName = System.mapLibraryName("sqlitejdbc");
+            sqliteNativeLibraryName = System.mapLibraryName(libName);
             if (sqliteNativeLibraryName != null && sqliteNativeLibraryName.endsWith(".dylib")) {
                 sqliteNativeLibraryName = sqliteNativeLibraryName.replace(".dylib", ".jnilib");
             }
