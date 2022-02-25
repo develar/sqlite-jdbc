@@ -5,10 +5,16 @@ The intention of this fork is to run the JDBC driver using the Panama API's rath
 As such, this version of the library requires Java 17. At the moment, only the SQLite library
 for Window x64 and x84 are included at appear to work. 
 
+The Panama support is provided by another library I maintain: [JPassport](https://github.com/boulder-on/JPassport).
+JPassport is to Panama as JNA is to JNI - you provide an interface class and it does most of the real work.
+
 Known issues:
 1. The Panama API only works for Windows
 2. SQLite functions are not working. SQL that does not require functions work.
-3. You must call **Class.forName("org.sqlite.JDBC");** (something about making the jar a module stopped auto loading the driver.) 
+3. You must call **Class.forName("org.sqlite.JDBC");** (something about making the jar a module stopped auto loading the driver.)
+4. You must add the following to your command line: 
+
+**--enable-native-access jpassport**
 
 My testing with simple select statements so far has shown that this version is about 2x faster
 than the standard JNI version.
