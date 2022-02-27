@@ -61,6 +61,13 @@ public abstract class Function {
     long value = 0; // pointer sqlite3_value**
     int args = 0;
 
+    public void setCallback(long context, int args, long value)
+    {
+        this.context = context;
+        this.args = args;
+        this.value = value;
+    }
+
     /**
      * Registers a given function with the connection.
      *
@@ -149,15 +156,24 @@ public abstract class Function {
      * Called by SQLite as a custom function. Should access arguments through <tt>value_*(int)</tt>,
      * return results with <tt>result(*)</tt> and throw errors with <tt>error(String)</tt>.
      */
-    protected abstract void xFunc() throws SQLException;
+    public abstract void xFunc() throws SQLException;
 
     /**
      * Returns the number of arguments passed to the function. Can only be called from
      * <tt>xFunc()</tt>.
      */
-    protected final synchronized int args() throws SQLException {
+    public final synchronized int args() throws SQLException {
         checkContext();
         return args;
+    }
+
+    /**
+     * Returns the number of arguments passed to the function. Can only be called from
+     * <tt>xFunc()</tt>.
+     */
+    public final synchronized long value() throws SQLException {
+        checkContext();
+        return value;
     }
 
     /**
@@ -313,7 +329,7 @@ public abstract class Function {
      */
     public abstract static class Aggregate extends Function implements Cloneable {
         /** @see org.sqlite.Function#xFunc() */
-        protected final void xFunc() {}
+        public final void xFunc() {}
 
         /**
          * Defines the abstract aggregate callback function
@@ -322,7 +338,7 @@ public abstract class Function {
          * @see <a
          *     href="http://www.sqlite.org/c3ref/aggregate_context.html">http://www.sqlite.org/c3ref/aggregate_context.html</a>
          */
-        protected abstract void xStep() throws SQLException;
+        public abstract void xStep() throws SQLException;
 
         /**
          * Defines the abstract aggregate callback function
@@ -331,7 +347,7 @@ public abstract class Function {
          * @see <a
          *     href="http://www.sqlite.org/c3ref/aggregate_context.html">http://www.sqlite.org/c3ref/aggregate_context.html</a>
          */
-        protected abstract void xFinal() throws SQLException;
+        public abstract void xFinal() throws SQLException;
 
         /** @see java.lang.Object#clone() */
         public Object clone() throws CloneNotSupportedException {
@@ -352,7 +368,7 @@ public abstract class Function {
          * @see <a
          *     href="https://sqlite.org/windowfunctions.html#user_defined_aggregate_window_functions">https://sqlite.org/windowfunctions.html#user_defined_aggregate_window_functions</a>
          */
-        protected abstract void xInverse() throws SQLException;
+        public abstract void xInverse() throws SQLException;
 
         /**
          * Defines the abstract window callback function
@@ -361,6 +377,6 @@ public abstract class Function {
          * @see <a
          *     href="https://sqlite.org/windowfunctions.html#user_defined_aggregate_window_functions">https://sqlite.org/windowfunctions.html#user_defined_aggregate_window_functions</a>
          */
-        protected abstract void xValue() throws SQLException;
+        public abstract void xValue() throws SQLException;
     }
 }

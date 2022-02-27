@@ -12,7 +12,8 @@ Known issues:
 1. The Panama API only works for Windows
 2. SQLite functions are not working. SQL that does not require functions work.
 3. You must call **Class.forName("org.sqlite.JDBC");** (something about making the jar a module stopped auto loading the driver.)
-4. You must add the following to your command line: 
+4. JPassport is required in the module path (jpassport-v0.5.0-alpha.jar)
+5. You must add the following to your command line: 
 
 **--enable-native-access jpassport**
 

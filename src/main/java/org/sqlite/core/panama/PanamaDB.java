@@ -84,6 +84,10 @@ public interface PanamaDB extends Passport {
     long sqlite3_value_int64(MemoryAddress addr);
     String sqlite3_value_text(MemoryAddress addr);
     double sqlite3_value_double(MemoryAddress addr);
+    MemoryAddress sqlite3_value_blob(MemoryAddress addr);
+    int sqlite3_value_bytes(MemoryAddress addr);
+    int sqlite3_value_type(MemoryAddress addr);
+
     int sqlite3_column_bytes(long stmt, int iCol);
 
     double sqlite3_column_double(long stmt, int col);
@@ -97,10 +101,12 @@ public interface PanamaDB extends Passport {
     MemoryAddress sqlite3_column_blob(long stmt, int col);
     int sqlite3_bind_blob(long stmt, int pos, byte[] a, int size, int type);
 
-    void sqlite3_result_null(long context);
-    void sqlite3_result_double(long context, double v);
-    void sqlite3_result_int64(long context, long v);
-    void sqlite3_result_int(long context, int v);
+    void sqlite3_result_null(MemoryAddress context);
+    void sqlite3_result_double(MemoryAddress context, double v);
+    void sqlite3_result_int64(MemoryAddress context, long v);
+    void sqlite3_result_int(MemoryAddress context, int v);
+    void sqlite3_result_text(MemoryAddress context, String value_bytes, int value_nbytes, long var);
+    void sqlite3_result_blob(MemoryAddress context, @RefArg byte[] bytes, int size, long var);
 
     int sqlite3_enable_shared_cache(int enable);
     int sqlite3_enable_load_extension(long sqliteHandle, int enable);
@@ -109,5 +115,19 @@ public interface PanamaDB extends Passport {
     int sqlite3_changes(long sqliteHandle);
     int sqlite3_total_changes(long sqliteHandle);
     int sqlite3_busy_handler(long sqliteHandle, MemoryAddress methodPtr, MemoryAddress address);
+
+
+    int sqlite3_create_function(long sqliteHandle, String name, int nArgs, int flags, long UDF,
+                                MemoryAddress xFunc, //xFunc(long  context, int, sqlite_value**);
+                                MemoryAddress xStep,  //xStep(long  context, int, sqlite_value**);
+                                MemoryAddress xFinal); //xFinal(long  context);
+
+
+    int sqlite3_create_window_function(long sqliteHandle, String name, int nArgs, int flags, long UDF,
+                                       MemoryAddress xStep, // xStep(long  context, int, sqlite_value**);
+                                       MemoryAddress xFinal, // xFinal(long  context)
+                                        MemoryAddress xValue, // xValue(long  context)
+                                       MemoryAddress xInverse, //xInverse (long  context, int, sqlite_value**);
+                                       MemoryAddress xDestroy); // xDestroy(void*)
 
 }

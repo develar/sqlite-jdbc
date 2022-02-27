@@ -28,6 +28,15 @@ public class PanamaDBImpl extends DB {
     private static boolean isLoaded;
     private static boolean loadSucceeded;
 
+    private static final int SQLITE_UTF8 = 1;
+    private static final int SQLITE_UTF16LE = 2;
+    private static final int SQLITE_UTF16BE = 3;
+    private static final int SQLITE_UTF16   = 4;    /* Use native byte order */
+    private static final int SQLITE_ANY     = 5;    /* sqlite3_create_function only */
+    private static final int SQLITE_UTF16_ALIGNED  = 8;    /* sqlite3_create_collation only */
+
+    private static final int SQLITE_TRANSIENT = -1;
+
     static {
         if ("The Android Project".equals(System.getProperty("java.vm.vendor"))) {
 //            System.loadLibrary("sqlitejdbc");
@@ -46,8 +55,6 @@ public class PanamaDBImpl extends DB {
 
     static PanamaDB m_panama = null;
     DBHandle m_dbHandle = new DBHandle(0);
-
-    private static final int SQLITE_TRANSIENT = -1;
 
     /**
      * Loads the SQLite interface backend.
@@ -493,48 +500,51 @@ public class PanamaDBImpl extends DB {
     @Override
     public synchronized void result_null(long context)
     {
-        m_panama.sqlite3_result_null(context);
+        m_panama.sqlite3_result_null(toref(context));
     }
+
 
     /** @see org.sqlite.core.DB#result_text(long, java.lang.String) */
     @Override
     public synchronized void result_text(long context, String val) {
-        result_text_utf8(context, stringToUtf8ByteArray(val));
-    }
 
-    synchronized void result_text_utf8(long context, byte[] valUtf8)
-    {
-        //todo implement
-        throw new NullPointerException("Not implemented result_text_utf8");
+        if (context == 0)
+            return;
+        if (val == null)
+        {
+            m_panama.sqlite3_result_null(toref(context));
+            return;
+        }
+
+        m_panama.sqlite3_result_text(toref(context), val, val.getBytes(StandardCharsets.UTF_8).length, SQLITE_TRANSIENT);
     }
 
     /** @see org.sqlite.core.DB#result_blob(long, byte[]) */
     @Override
     public synchronized void result_blob(long context, byte[] val)
     {
-        //todo implement
-        throw new NullPointerException("Not implemented result_blob");
+        m_panama.sqlite3_result_blob(toref(context), val, val.length, SQLITE_TRANSIENT);
     }
 
     /** @see org.sqlite.core.DB#result_double(long, double) */
     @Override
     public synchronized void result_double(long context, double val)
     {
-        m_panama.sqlite3_result_double(context, val);
+        m_panama.sqlite3_result_double(toref(context), val);
     }
 
     /** @see org.sqlite.core.DB#result_long(long, long) */
     @Override
     public synchronized void result_long(long context, long val)
     {
-        m_panama.sqlite3_result_int64(context, val);
+        m_panama.sqlite3_result_int64(toref(context), val);
     }
 
     /** @see org.sqlite.core.DB#result_int(long, int) */
     @Override
     public synchronized void result_int(long context, int val)
     {
-        m_panama.sqlite3_result_int(context, val);
+        m_panama.sqlite3_result_int(toref(context), val);
     }
 
     /** @see org.sqlite.core.DB#result_error(long, java.lang.String) */
@@ -552,84 +562,88 @@ public class PanamaDBImpl extends DB {
     /** @see org.sqlite.core.DB#value_text(org.sqlite.Function, int) */
     @Override
     public synchronized String value_text(Function f, int arg) {
-        return utf8ByteBufferToString(value_text_utf8(f, arg));
-    }
-
-    synchronized ByteBuffer value_text_utf8(Function f, int argUtf8)
-    {
-        throw new NullPointerException("Not implemented value_text_utf8");
-        //todo implement
-//        return null;
+        return m_panama.sqlite3_value_text(tovalue(f, arg));
     }
 
     /** @see org.sqlite.core.DB#value_blob(org.sqlite.Function, int) */
     @Override
     public synchronized byte[] value_blob(Function f, int arg)
     {
-        throw new NullPointerException("Not implemented value_blob");
-         //todo implement
-//        return null;
+        var value = tovalue(f, arg);
+        var mem = m_panama.sqlite3_value_blob(value);
+        if (mem == MemoryAddress.NULL)
+            return null;
+
+        int len = m_panama.sqlite3_value_bytes(value);
+        return Utils.toArrByte(mem, len);
     }
 
     /** @see org.sqlite.core.DB#value_double(org.sqlite.Function, int) */
     @Override
     public synchronized double value_double(Function f, int arg)
     {
-        throw new NullPointerException("Not implemented value_double");
-        //todo implement
+        return m_panama.sqlite3_value_double(tovalue(f, arg));
     }
 
     /** @see org.sqlite.core.DB#value_long(org.sqlite.Function, int) */
     @Override
     public synchronized long value_long(Function f, int arg)
     {
-        throw new NullPointerException("Not implemented value_long");
-        //todo implement
-//        return 0;
+        return m_panama.sqlite3_value_int64(tovalue(f, arg));
     }
 
     /** @see org.sqlite.core.DB#value_int(org.sqlite.Function, int) */
     @Override
     public synchronized int value_int(Function f, int arg)
     {
-        throw new NullPointerException("Not implemented value_int");
-        //todo implement
-//        return 0;
+        return m_panama.sqlite3_value_int(tovalue(f, arg));
     }
 
     /** @see org.sqlite.core.DB#value_type(org.sqlite.Function, int) */
     @Override
     public synchronized int value_type(Function f, int arg)
     {
-        //todo implement
-        return 0;
+        return m_panama.sqlite3_value_type(tovalue(f, arg));
     }
 
     /** @see org.sqlite.core.DB#create_function(java.lang.String, org.sqlite.Function, int, int) */
     @Override
     public synchronized int create_function(String name, Function func, int nArgs, int flags) {
-        return create_function_utf8(stringToUtf8ByteArray(name), func, nArgs, flags);
+        return create_function_utf8(name, func, nArgs, flags);
     }
 
-    synchronized int create_function_utf8(
-            byte[] nameUtf8, Function func, int nArgs, int flags)
+    synchronized int create_function_utf8(String name, Function func, int nArgs, int flags)
     {
-        //todo implement
-        throw new NullPointerException("Not implemented: create_function_utf8");
-//        return 0;
+        if (func instanceof Function.Aggregate)
+        {
+            var pFunc = new PanamaFunction(func);
+
+            return m_panama.sqlite3_create_window_function(m_dbHandle.handle(), name, nArgs, SQLITE_UTF16 | flags,
+                    0,
+                    pFunc.getxStepCall(),
+                    pFunc.getxFinalCall(),
+                    func instanceof Function.Window ? pFunc.getxValueCall() : MemoryAddress.NULL,
+                    func instanceof Function.Window ? pFunc.getxInverseCall() : MemoryAddress.NULL,
+                    MemoryAddress.NULL);
+        }
+
+        return m_panama.sqlite3_create_function(m_dbHandle.handle(), name, nArgs, SQLITE_UTF16 | flags,
+                0,
+                new PanamaFunction(func).getxFuncCall(),
+                MemoryAddress.NULL,
+                MemoryAddress.NULL);
     }
 
     /** @see org.sqlite.core.DB#destroy_function(java.lang.String, int) */
     @Override
     public synchronized int destroy_function(String name, int nArgs) {
-        return destroy_function_utf8(stringToUtf8ByteArray(name), nArgs);
+        return m_panama.sqlite3_create_function(m_dbHandle.handle(), name, nArgs, SQLITE_UTF16,
+                0,
+                MemoryAddress.NULL,
+                MemoryAddress.NULL,
+                MemoryAddress.NULL);
     }
 
-    synchronized int destroy_function_utf8(byte[] nameUtf8, int nArgs)
-    {
-        //todo implement
-        throw new NullPointerException("Not implemented: destroy_function_utf8");
-    }
 
     /** @see org.sqlite.core.DB#create_collation(String, Collation) */
     @Override
@@ -660,7 +674,7 @@ public class PanamaDBImpl extends DB {
     synchronized  void free_functions()
     {
         //todo implement
-        throw new NullPointerException("Not implemented: free_functions");
+        // I don't think I need to do anything here!
     }
 
     @Override
@@ -776,4 +790,31 @@ public class PanamaDBImpl extends DB {
         //todo implement
     }
 
+    private static MemoryAddress toref(long context)
+    {
+        return MemoryAddress.ofLong(context);
+    }
+
+    private static MemoryAddress tovalue(Function f, int arg)
+    {
+        if (arg < 0)
+            throw new IllegalArgumentException("Arg must bet >= 0, not "+ arg);
+
+        try {
+            int args = f.args();
+            long value = f.value();
+            var addr = toref(value);
+
+            if (arg >= args)
+                throw new IllegalArgumentException("arg out of range");
+
+            return toref(Utils.toArrLong(addr, args)[arg]);
+        }
+        catch (SQLException ex)
+        {
+            ex.printStackTrace();
+        }
+
+        return MemoryAddress.NULL;
+    }
 }
