@@ -1,25 +1,55 @@
-SQLite JDBC Driver [![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/xerial/sqlite-jdbc/CI/master)](https://github.com/xerial/sqlite-jdbc/actions/workflows/test.yml?query=branch%3Amaster) 
+SQLite JDBC Driver - Foreign Linker version [![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/xerial/sqlite-jdbc/CI/master)](https://github.com/xerial/sqlite-jdbc/actions/workflows/test.yml?query=branch%3Amaster) 
 ==================
 
-The intention of this fork is to run the JDBC driver using the Panama API's rather than JNI.
-As such, this version of the library requires Java 17. At the moment, only the SQLite library
-for Window x64 and x84 are included at appear to work. 
+The standard version of the SQLite driver makes use of precompiled native code. The precompiled
+code is all JNI based. Java's Panama project has introduced the Foreign Linker and Foreign Memory
+Access API's - the purpose of these API's is to replace JNI. Testing so far indicates 2 things about
+the new API's
+
+1. The new API's are much easier to use than JNI - all native access is written in Java.
+2. The new API can be considerably faster than JNI.
+
+The intention of this fork is to run the SQLite JDBC driver using the Panama API's rather than JNI.
+As such, this version of the library requires **Java 17 and only works on Windows**. Since the Panama
+API's are still changing, and are different in each version of Java they have previewed in, this
+project only works in Java 17 - no other versions will work.
 
 The Panama support is provided by another library I maintain: [JPassport](https://github.com/boulder-on/JPassport).
 JPassport is to Panama as JNA is to JNI - you provide an interface class and it does most of the real work.
 
-Known issues:
-1. The Panama API only works for Windows
-2. SQLite functions are not working. SQL that does not require functions work.
-3. You must call **Class.forName("org.sqlite.JDBC");** (something about making the jar a module stopped auto loading the driver.)
-4. JPassport is required in the module path (jpassport-v0.5.0-alpha.jar)
-5. You must add the following to your command line: 
-
-**--enable-native-access jpassport**
-
 My testing with simple select statements so far has shown that this version is about 2x faster
 than the standard JNI version.
 
+###Known issues:
+
+1. The Panama API only works for Windows. If you use this code on other plaforms it falls back to JNI.
+2. There are currently 7 Unit tests failing. Most seem pretty benign.
+
+There is no reason that this project would not work using Panama on all platforms. I just don't have
+the SQLite libraries built for other platforms. The SQLite website only provides the Windows DLLs. 
+
+###Using this code
+
+You will need some small changes to your code/environment to use this code:
+
+####Code changes
+You must call:
+
+```Java
+Class.forName("org.sqlite.JDBC"); 
+```
+
+(something about making the jar a module stopped auto loading the driver.)
+
+####Environment changes
+1. Add jpassport-v0.5.0-alpha.jar to the module path
+2. Add the following to your command line: 
+
+```
+--enable-native-access jpassport,sqlite.jdbc
+```
+
+SQLITE JDBC Driver
 ==================
 
 SQLite JDBC is a library for accessing and creating [SQLite](http://sqlite.org) database files in Java.

@@ -47,7 +47,7 @@ public class ProgressHandlerTest {
                 1,
                 new ProgressHandler() {
                     @Override
-                    protected int progress() throws SQLException {
+                    public int progress() throws SQLException {
                         calls[0]++;
                         return 0;
                     }
@@ -64,7 +64,7 @@ public class ProgressHandlerTest {
                 1,
                 new ProgressHandler() {
                     @Override
-                    protected int progress() throws SQLException {
+                    public int progress() throws SQLException {
                         calls[0]++;
                         return 0;
                     }
@@ -86,7 +86,7 @@ public class ProgressHandlerTest {
                     1,
                     new ProgressHandler() {
                         @Override
-                        protected int progress() throws SQLException {
+                        public int progress() throws SQLException {
                             return 1;
                         }
                     });

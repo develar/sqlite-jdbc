@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -120,7 +121,7 @@ public class ErrorMessageTest {
                 assertThrows(
                         SQLException.class,
                         () -> finalStmt.executeUpdate("insert into sample values(2, \"bar\")"));
-        assertTrue(exception.getMessage().contains("[SQLITE_READONLY]"));
+        assertTrue(exception.getMessage().contains("readonly"));
         stmt.close();
         conn.close();
     }
@@ -154,7 +155,8 @@ public class ErrorMessageTest {
 
         File to = File.createTempFile("error-message-test-plain-2", ".sqlite");
         assumeTrue(to.delete());
-        assumeTrue(from.renameTo(to));
+        Files.move(from.toPath(), to.toPath());
+        assumeTrue(Files.exists(to.toPath()));
 
         Exception exception =
                 assertThrows(

@@ -1,29 +1,21 @@
 package org.sqlite.core;
 
-import jdk.incubator.foreign.CLinker;
-import jdk.incubator.foreign.FunctionDescriptor;
-import jdk.incubator.foreign.MemoryAddress;
-import jdk.incubator.foreign.ResourceScope;
+import jdk.incubator.foreign.*;
 import jpassport.PassportFactory;
 import jpassport.Utils;
 import org.sqlite.*;
 import org.sqlite.core.panama.*;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
-
-import static jdk.incubator.foreign.CLinker.C_INT;
+import java.util.*;
 
 public class PanamaDBImpl extends DB {
 
-    /**
-     * SQLite connection handle.
-     */
-    long pointer = 0;
+    private final List<ProgressFunction> progressList = new ArrayList<>();
+    private final PanamaCallbacks callbackCreator = new PanamaCallbacks();
+    private final Map<String, PanamaFunction> callbackFunctions = new HashMap<>();
+    private PanamaBusyHandler m_currentHandler = null;
 
     private static boolean isLoaded;
     private static boolean loadSucceeded;
@@ -36,6 +28,11 @@ public class PanamaDBImpl extends DB {
     private static final int SQLITE_UTF16_ALIGNED  = 8;    /* sqlite3_create_collation only */
 
     private static final int SQLITE_TRANSIENT = -1;
+
+    private static final int SQLITE_OPEN_READONLY = 0x00000001;
+    private static final int SQLITE_OPEN_READWRITE = 0x00000002;
+    private static final int SQLITE_OPEN_CREATE =    0x00000004;
+    private static final int SQLITE_OPEN_URI=        0x00000040;
 
     static {
         if ("The Android Project".equals(System.getProperty("java.vm.vendor"))) {
@@ -77,17 +74,6 @@ public class PanamaDBImpl extends DB {
         isLoaded = true;
         return loadSucceeded;
     }
-
-    /**
-     * linked list of all instanced UDFDatas
-     */
-    private final long udfdatalist = 0;
-
-    /**
-     * linked list of all instanced CollationData
-     */
-    private final long colldatalist = 0;
-
 
     // WRAPPER FUNCTIONS ////////////////////////////////////////////
 
@@ -171,23 +157,8 @@ public class PanamaDBImpl extends DB {
     public synchronized void busy_timeout(int ms) throws SQLException {
         m_dbHandle.checkValid();
         m_panama.sqlite3_busy_timeout(m_dbHandle.handle(), ms);
-
     }
 
-    static class PanamaBusyHandler extends BusyHandler
-    {
-        BusyHandler wrapped;
-
-        PanamaBusyHandler(BusyHandler bh)
-        {
-            wrapped = bh;
-        }
-
-        @Override
-        public int callback(int nbPrevInvok) throws SQLException {
-            return wrapped.callback(nbPrevInvok);
-        }
-    }
 
     /**
      * @see org.sqlite.core.DB#busy_handler(BusyHandler)
@@ -195,25 +166,16 @@ public class PanamaDBImpl extends DB {
     @Override
     public synchronized void busy_handler(BusyHandler busyHandler)
     {
-        //todo implement
-
         if (busyHandler == null) {
             m_panama.sqlite3_busy_handler(m_dbHandle.handle(), MemoryAddress.NULL, MemoryAddress.NULL);
+            m_currentHandler = null;
         } else {
-            try {
-                var lookup = MethodHandles.lookup();
-                var mtype = MethodType.methodType(int.class, int.class);
-                var handle = lookup.findVirtual(BusyHandler.class, "callback", mtype);
-                var handleToCall = handle.bindTo(busyHandler);
+            if (m_currentHandler != null)
+                throw new IllegalArgumentException("A busy handler already exists");
 
-                ResourceScope scope = ResourceScope.newImplicitScope();
-                var addr = CLinker.getInstance().upcallStub(handleToCall, FunctionDescriptor.of(C_INT, C_INT), scope);
-                m_panama.sqlite3_busy_handler(m_dbHandle.handle(), addr, MemoryAddress.NULL);
-            }
-            catch (NoSuchMethodException | IllegalAccessException ex)
-            {
-                ex.printStackTrace();
-            }
+            m_currentHandler = new PanamaBusyHandler(busyHandler);
+            var addr = callbackCreator.createCallback(m_currentHandler, "callback");
+            m_panama.sqlite3_busy_handler(m_dbHandle.handle(), addr, MemoryAddress.NULL);
         }
     }
 
@@ -408,7 +370,6 @@ public class PanamaDBImpl extends DB {
     @Override
     public synchronized byte[] column_blob(long stmt, int col)
     {
-        //todo - implement
         if (m_dbHandle.isValid())
         {
             var type = m_panama.sqlite3_column_type(stmt, col);
@@ -550,13 +511,8 @@ public class PanamaDBImpl extends DB {
     /** @see org.sqlite.core.DB#result_error(long, java.lang.String) */
     @Override
     public synchronized void result_error(long context, String err) {
-        result_error_utf8(context, stringToUtf8ByteArray(err));
-    }
 
-    synchronized void result_error_utf8(long context, byte[] errUtf8)
-    {
-        //todo implement
-        throw new NullPointerException("Not implemented result_error_utf8");
+        m_panama.sqlite3_result_error(toref(context), err, err.getBytes(StandardCharsets.UTF_8).length);
     }
 
     /** @see org.sqlite.core.DB#value_text(org.sqlite.Function, int) */
@@ -614,9 +570,11 @@ public class PanamaDBImpl extends DB {
 
     synchronized int create_function_utf8(String name, Function func, int nArgs, int flags)
     {
+        var pFunc = new PanamaFunction(this, func);
+        callbackFunctions.put(name, pFunc);
+
         if (func instanceof Function.Aggregate)
         {
-            var pFunc = new PanamaFunction(func);
 
             return m_panama.sqlite3_create_window_function(m_dbHandle.handle(), name, nArgs, SQLITE_UTF16 | flags,
                     0,
@@ -629,7 +587,7 @@ public class PanamaDBImpl extends DB {
 
         return m_panama.sqlite3_create_function(m_dbHandle.handle(), name, nArgs, SQLITE_UTF16 | flags,
                 0,
-                new PanamaFunction(func).getxFuncCall(),
+                pFunc.getxFuncCall(),
                 MemoryAddress.NULL,
                 MemoryAddress.NULL);
     }
@@ -637,6 +595,7 @@ public class PanamaDBImpl extends DB {
     /** @see org.sqlite.core.DB#destroy_function(java.lang.String, int) */
     @Override
     public synchronized int destroy_function(String name, int nArgs) {
+        callbackFunctions.remove(name);
         return m_panama.sqlite3_create_function(m_dbHandle.handle(), name, nArgs, SQLITE_UTF16,
                 0,
                 MemoryAddress.NULL,
@@ -645,44 +604,51 @@ public class PanamaDBImpl extends DB {
     }
 
 
+    HashMap<String, CollateCallback> activeCollates = new HashMap<>();
+
     /** @see org.sqlite.core.DB#create_collation(String, Collation) */
     @Override
     public synchronized int create_collation(String name, Collation coll) {
-        return create_collation_utf8(stringToUtf8ByteArray(name), coll);
+        var callback = new CollateCallback(coll);
+        activeCollates.put(name, callback);
+
+        return m_panama.sqlite3_create_collation(
+                m_dbHandle.handle(),
+                name,            // collation name
+                SQLITE_UTF8,          // preferred chars
+                MemoryAddress.NULL,
+                callbackCreator.createCallback(callback, "callback"));
     }
 
-    synchronized  int create_collation_utf8(byte[] nameUtf8, Collation coll)
-    {
-        //todo implement
-        throw new NullPointerException("Not implemented: create_collation_utf8");
-    }
 
     /** @see org.sqlite.core.DB#destroy_collation(String) */
     @Override
     public synchronized int destroy_collation(String name) {
-        return destroy_collation_utf8(stringToUtf8ByteArray(name));
-    }
 
-    synchronized int destroy_collation_utf8(byte[] nameUtf8)
-    {
-        //todo implement
-        throw new NullPointerException("Not implemented: destroy_collation_utf8");
-    }
+        activeCollates.remove(name);
+
+        return m_panama.sqlite3_create_collation(
+                m_dbHandle.handle(),
+                name,            // collation name
+                SQLITE_UTF8,          // preferred chars
+                MemoryAddress.NULL,
+                MemoryAddress.NULL);
+     }
+
 
     /** @see org.sqlite.core.DB#free_functions() */
     @Override
     synchronized  void free_functions()
     {
-        //todo implement
-        // I don't think I need to do anything here!
+        callbackFunctions.clear();
     }
 
     @Override
     public synchronized  int limit(int id, int value) throws SQLException
     {
-        //todo implement
-        return 0;
+        return m_panama.sqlite3_limit(m_dbHandle.handle(), id, value);
     }
+
 
     /**
      * @see org.sqlite.core.DB#backup(java.lang.String, java.lang.String,
@@ -691,15 +657,34 @@ public class PanamaDBImpl extends DB {
     @Override
     public int backup(String dbName, String destFileName, ProgressObserver observer)
             throws SQLException {
-        return backup(stringToUtf8ByteArray(dbName), stringToUtf8ByteArray(destFileName), observer);
-    }
 
-    synchronized  int backup(
-            byte[] dbNameUtf8, byte[] destFileNameUtf8, ProgressObserver observer)
-            throws SQLException
-    {
-        //todo implement
-        return 0;
+        int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
+        if (m_panama.sqlite3_strnicmp(destFileName, "file:", 5) == 0) {
+            flags |= SQLITE_OPEN_URI;
+        }
+
+        var pFile = DBHandle.createOpenHandle();
+        int rc = m_panama.sqlite3_open_v2(destFileName, pFile, flags, null);
+        long handle = pFile[0].handle();
+
+        if( rc==SQLITE_OK ){
+
+            /* Open the sqlite3_backup object used to accomplish the transfer */
+            var pBackup = m_panama.sqlite3_backup_init(handle, "main", m_dbHandle.handle(), dbName);
+            if( pBackup != 0 ){
+                while((rc = m_panama.sqlite3_backup_step(pBackup,100))==SQLITE_OK ){}
+
+                /* Release resources allocated by backup_init(). */
+                m_panama.sqlite3_backup_finish(pBackup);
+            }
+            rc = m_panama.sqlite3_errcode(handle);
+        }
+
+        /* Close the database connection opened on database file zFilename
+         ** and return the result of this function. */
+        m_panama.sqlite3_close(handle);
+
+        return rc;
     }
 
     /**
@@ -710,16 +695,39 @@ public class PanamaDBImpl extends DB {
     public synchronized int restore(String dbName, String sourceFileName, ProgressObserver observer)
             throws SQLException {
 
-        return restore(
-                stringToUtf8ByteArray(dbName), stringToUtf8ByteArray(sourceFileName), observer);
-    }
+        /* Open the database file identified by dFileName. */
+        int flags = SQLITE_OPEN_READONLY;
+        if (m_panama.sqlite3_strnicmp(sourceFileName, "file:", 5) == 0) {
+            flags |= SQLITE_OPEN_URI;
+        }
 
-    synchronized int restore(
-            byte[] dbNameUtf8, byte[] sourceFileName, ProgressObserver observer)
-            throws SQLException
-    {
-        //todo implement
-        return 0;
+        var pFile = DBHandle.createOpenHandle();
+        int rc = m_panama.sqlite3_open_v2(sourceFileName, pFile, flags, null);
+        long handle = pFile[0].handle();
+
+        if( rc==SQLITE_OK ){
+            int nTimeout = 0;
+
+            /* Open the sqlite3_backup object used to accomplish the transfer */
+            var pBackup = m_panama.sqlite3_backup_init(m_dbHandle.handle(), dbName, handle, "main");
+            if( pBackup != 0 ){
+                while( (rc = m_panama.sqlite3_backup_step(pBackup,100))==SQLITE_OK
+                        || rc==SQLITE_BUSY  ){
+                    if( rc==SQLITE_BUSY ){
+                        if( nTimeout++ >= 3 ) break;
+                        m_panama.sqlite3_sleep(100);
+                    }
+                }
+                /* Release resources allocated by backup_init(). */
+                m_panama.sqlite3_backup_finish(pBackup);
+            }
+            rc = m_panama.sqlite3_errcode(handle);
+        }
+
+        /* Close the database connection opened on database file zFilename
+         ** and return the result of this function. */
+        m_panama.sqlite3_close(handle);
+        return rc;
     }
 
     // COMPOUND FUNCTIONS (for optimisation) /////////////////////////
@@ -727,7 +735,7 @@ public class PanamaDBImpl extends DB {
     /**
      * Provides metadata for table columns.
      *
-     * @returns For each column returns: <br>
+     * @return For each column returns: <br>
      *     res[col][0] = true if column constrained NOT NULL<br>
      *     res[col][1] = true if column is part of the primary key<br>
      *     res[col][2] = true if column is auto-increment.
@@ -736,21 +744,56 @@ public class PanamaDBImpl extends DB {
     @Override
     synchronized boolean[][] column_metadata(long stmt)
     {
-        //todo implement
-        return null;
+        int colCount = m_panama.sqlite3_column_count(stmt);
+        boolean[][] ret = new boolean[colCount][3];
+
+
+        for (int n = 0; n < colCount; ++n)
+        {
+            var zColumnName = m_panama.sqlite3_column_name(stmt, n);
+            var zTableName  = m_panama.sqlite3_column_table_name(stmt, n);
+
+            int[] notNull = {0};
+            int[] primaryKey = {0};
+            int[] autoIncrement = {0};
+
+            if (zColumnName != null && zTableName != null) {
+                m_panama.sqlite3_table_column_metadata(m_dbHandle.handle(), null,
+                        zTableName, zColumnName, MemoryAddress.NULL, MemoryAddress.NULL,
+                        notNull, primaryKey, autoIncrement);
+            }
+
+            ret[n][0] = notNull[0] != 0;
+            ret[n][1] = primaryKey[0] != 0;
+            ret[n][2] = autoIncrement[0] != 0;
+        }
+
+        return ret;
     }
 
-    @Override
+
+        @Override
     synchronized void set_commit_listener(boolean enabled)
     {
-        //todo implement
+        if (enabled)
+        {
+            m_panama.sqlite3_commit_hook(m_dbHandle.handle(), callbackCreator.createCallback(this, "commit_hook"), MemoryAddress.NULL);
+            m_panama.sqlite3_rollback_hook(m_dbHandle.handle(), callbackCreator.createCallback(this, "rollback_hook"), MemoryAddress.NULL);
+        }
+        else
+        {
+            m_panama.sqlite3_commit_hook(m_dbHandle.handle(), MemoryAddress.NULL, MemoryAddress.NULL);
+            m_panama.sqlite3_rollback_hook(m_dbHandle.handle(), MemoryAddress.NULL, MemoryAddress.NULL);
+        }
     }
 
     @Override
     synchronized void set_update_listener(boolean enabled)
     {
-        //todo implement
-
+        if (enabled)
+            m_panama.sqlite3_update_hook(m_dbHandle.handle(), callbackCreator.createCallback(this, "update_hook"), MemoryAddress.NULL);
+        else
+            m_panama.sqlite3_update_hook(m_dbHandle.handle(), MemoryAddress.NULL, MemoryAddress.NULL);
     }
 
     /**
@@ -763,31 +806,25 @@ public class PanamaDBImpl extends DB {
         throw new SQLException(msg);
     }
 
-    static byte[] stringToUtf8ByteArray(String str) {
-        if (str == null) {
-            return null;
-        }
-        return str.getBytes(StandardCharsets.UTF_8);
-    }
 
-    static String utf8ByteBufferToString(ByteBuffer buffer) {
-        if (buffer == null) {
-            return null;
-        }
-        byte[] buff = new byte[buffer.remaining()];
-        buffer.get(buff);
-        return new String(buff, StandardCharsets.UTF_8);
-    }
-
-    public synchronized void register_progress_handler(
-            int vmCalls, ProgressHandler progressHandler) throws SQLException
+    public synchronized void register_progress_handler(int vmCalls, ProgressHandler progressHandler)
     {
-        //todo implement
+        var progress = new ProgressFunction(progressHandler);
+        progressList.add(progress);
+
+        m_panama.sqlite3_progress_handler(m_dbHandle.handle(), vmCalls,
+                callbackCreator.createCallback(progress, "progress"), MemoryAddress.NULL);
     }
 
-    public synchronized void clear_progress_handler() throws SQLException
+    public synchronized void clear_progress_handler()
     {
-        //todo implement
+        m_panama.sqlite3_progress_handler(m_dbHandle.handle(), 0, MemoryAddress.NULL, MemoryAddress.NULL);
+        progressList.clear();
+    }
+
+    public synchronized void setError(long context, String msg)
+    {
+        m_panama.sqlite3_result_error(toref(context), msg, msg.getBytes(StandardCharsets.UTF_8).length);
     }
 
     private static MemoryAddress toref(long context)
@@ -816,5 +853,79 @@ public class PanamaDBImpl extends DB {
         }
 
         return MemoryAddress.NULL;
+    }
+
+    public int commit_hook(MemoryAddress context)
+    {
+        onCommit(true);
+        return 0;
+    }
+
+    public void rollback_hook(MemoryAddress context)
+    {
+        onCommit(false);
+    }
+
+    public void update_hook(MemoryAddress context, int type, MemoryAddress database, MemoryAddress table, long row) {
+
+        onUpdate( type, Utils.readString(database), Utils.readString(table), row);
+    }
+
+
+    public static class CollateCallback
+    {
+        Collation collation;
+
+        CollateCallback(Collation callback)
+        {
+            collation = callback;
+        }
+
+        public int callback(MemoryAddress context, int len1, MemoryAddress str1, int len2, MemoryAddress str2 )
+        {
+            String s1 = new String(Utils.toArrByte(str1, len1));
+            String s2 = new String(Utils.toArrByte(str2, len2));
+
+            return collation.xCompare(s1, s2);
+        }
+    }
+
+    public static class PanamaBusyHandler
+    {
+        private final BusyHandler wrapped;
+
+        PanamaBusyHandler(BusyHandler bh)
+        {
+            wrapped = bh;
+        }
+
+        public int callback(MemoryAddress addr, int nbPrevInvok) throws SQLException {
+                return wrapped.callback(nbPrevInvok);
+        }
+    }
+
+    public static class ProgressFunction {
+        private final ProgressHandler progress;
+
+        ProgressFunction(ProgressHandler handler)
+        {
+            progress = handler;
+        }
+
+        public int progress(MemoryAddress address)
+        {
+            try {
+                return progress.progress();
+            }
+            catch (SQLException ex)
+            {
+                return -1;
+            }
+        }
+    }
+
+    public PanamaCallbacks getCallbackCreator()
+    {
+        return callbackCreator;
     }
 }

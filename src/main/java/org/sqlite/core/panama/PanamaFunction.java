@@ -1,63 +1,92 @@
 package org.sqlite.core.panama;
 
-import jdk.incubator.foreign.CLinker;
-import jdk.incubator.foreign.FunctionDescriptor;
 import jdk.incubator.foreign.MemoryAddress;
-import jdk.incubator.foreign.ResourceScope;
 import org.sqlite.Function;
+import org.sqlite.core.PanamaDBImpl;
 
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.sql.SQLException;
 
-import static jdk.incubator.foreign.CLinker.*;
 
 public class PanamaFunction {
-    private Function function;
 
-    public PanamaFunction(Function call)
+    private final Function function;
+    private final PanamaDBImpl pDB;
+
+    public PanamaFunction(PanamaDBImpl db, Function call)
     {
         function = call;
+        pDB = db;
     }
 
     public void xFunc(long context, int args, MemoryAddress value) throws SQLException
     {
-        function.setCallback(context, args, value.toRawLongValue());
-        function.xFunc();
+        synchronized (function) {
+            function.setCallback(context, args, value.toRawLongValue());
+            try {
+                function.xFunc();
+            } catch (SQLException ex) {
+                pDB.setError(context, ex.getMessage());
+            }
+        }
         function.setCallback(0, 0, 0);
     }
 
     public void xStep(long context, int args, MemoryAddress value) throws SQLException
     {
         function.setCallback(context, args, value.toRawLongValue());
-        ((Function.Aggregate)function).xStep();
+        try {
+            ((Function.Aggregate)function).xStep();
+        }
+        catch (SQLException ex)
+        {
+            pDB.setError(context, ex.getMessage());
+        }
         function.setCallback(0, 0, 0);
     }
 
     public void xInverse(long context, int args, MemoryAddress value) throws SQLException
     {
         function.setCallback(context, args, value.toRawLongValue());
+        try {
         ((Function.Window)function).xInverse();
+        }
+        catch (SQLException ex)
+        {
+            pDB.setError(context, ex.getMessage());
+        }
         function.setCallback(0, 0, 0);
     }
 
     public void xFinal(long context) throws SQLException
     {
         function.setCallback(context,0, 0);
-        ((Function.Aggregate)function).xFinal();
+        try{
+            ((Function.Aggregate)function).xFinal();
+        }
+        catch (SQLException ex)
+        {
+            pDB.setError(context, ex.getMessage());
+        }
+
         function.setCallback(0, 0, 0);
     }
 
     public void xValue(long context) throws SQLException
     {
         function.setCallback(context,0, 0);
+        try {
         ((Function.Window)function).xValue();
+        }
+        catch (SQLException ex)
+        {
+            pDB.setError(context, ex.getMessage());
+        }
         function.setCallback(0, 0, 0);
     }
 
     public MemoryAddress getxFuncCall()
     {
-        return getCall3("xFunc");
+        return getCall("xFunc");
     }
 
     public MemoryAddress getxStepCall()
@@ -65,7 +94,7 @@ public class PanamaFunction {
         if (!(function instanceof Function.Aggregate))
             throw new IllegalArgumentException("Not an aggregate function!");
 
-        return getCall3("xStep");
+        return getCall("xStep");
     }
 
     public MemoryAddress getxInverseCall()
@@ -73,64 +102,26 @@ public class PanamaFunction {
         if (!(function instanceof Function.Window))
             throw new IllegalArgumentException("Not an aggregate function!");
 
-        return getCall3("xInverse");
+        return getCall("xInverse");
     }
-
-
 
     public MemoryAddress getxFinalCall()
     {
         if (!(function instanceof Function.Aggregate))
             throw new IllegalArgumentException("Not an aggregate function!");
 
-        return getCall1("xFinal");
+        return getCall("xFinal");
     }
 
     public MemoryAddress getxValueCall()
     {
         if (!(function instanceof Function.Aggregate))
             throw new IllegalArgumentException("Not an aggregate function!");
-        return getCall1("xValue");
+        return getCall("xValue");
     }
 
-    public MemoryAddress getCall1(String name)
+    public MemoryAddress getCall(String name)
     {
-        if (!(function instanceof Function.Aggregate))
-            throw new IllegalArgumentException("Not an aggregate function!");
-
-        try {
-            var lookup = MethodHandles.lookup();
-            var mtype = MethodType.methodType(void.class, long.class);
-            var handle = lookup.findVirtual(PanamaFunction.class, name, mtype);
-            var handleToCall = handle.bindTo(this);
-
-            ResourceScope scope = ResourceScope.globalScope();
-            return CLinker.getInstance().upcallStub(handleToCall, FunctionDescriptor.ofVoid(C_LONG_LONG), scope);
-        }
-        catch (NoSuchMethodException | IllegalAccessException ex)
-        {
-            ex.printStackTrace();
-        }
-
-        return MemoryAddress.NULL;
-    }
-
-    private MemoryAddress getCall3(String name)
-    {
-        try {
-            var lookup = MethodHandles.lookup();
-            var mtype = MethodType.methodType(void.class, long.class, int.class, MemoryAddress.class);
-            var handle = lookup.findVirtual(PanamaFunction.class, name, mtype);
-            var handleToCall = handle.bindTo(this);
-
-            ResourceScope scope = ResourceScope.globalScope();
-            return CLinker.getInstance().upcallStub(handleToCall, FunctionDescriptor.ofVoid(C_LONG_LONG, C_INT, C_POINTER), scope);
-        }
-        catch (NoSuchMethodException | IllegalAccessException ex)
-        {
-            ex.printStackTrace();
-        }
-
-        return MemoryAddress.NULL;
+        return pDB.getCallbackCreator().createCallback(this, name);
     }
 }

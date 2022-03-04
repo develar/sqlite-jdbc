@@ -284,7 +284,7 @@ public class UDFTest {
                 "inform",
                 new Function() {
                     @Override
-                    protected void xFunc() throws SQLException {
+                    public void xFunc() throws SQLException {
                         gotTrigger = value_int(0);
                     }
                 });
@@ -305,14 +305,14 @@ public class UDFTest {
                     private int val = 0;
 
                     @Override
-                    protected void xStep() throws SQLException {
+                    public void xStep() throws SQLException {
                         for (int i = 0; i < args(); i++) {
                             val += value_int(i);
                         }
                     }
 
                     @Override
-                    protected void xFinal() throws SQLException {
+                    public void xFinal() throws SQLException {
                         result(val);
                     }
                 });
@@ -336,26 +336,26 @@ public class UDFTest {
                     private int val = 0;
 
                     @Override
-                    protected void xStep() throws SQLException {
+                    public void xStep() throws SQLException {
                         for (int i = 0; i < args(); i++) {
                             val += value_int(i);
                         }
                     }
 
                     @Override
-                    protected void xInverse() throws SQLException {
+                    public void xInverse() throws SQLException {
                         for (int i = 0; i < args(); i++) {
                             val -= value_int(i);
                         }
                     }
 
                     @Override
-                    protected void xValue() throws SQLException {
+                    public void xValue() throws SQLException {
                         result(val);
                     }
 
                     @Override
-                    protected void xFinal() throws SQLException {
+                    public void xFinal() throws SQLException {
                         result(val);
                     }
                 });
@@ -518,7 +518,7 @@ public class UDFTest {
                     int sum = 0;
 
                     @Override
-                    protected void xFunc() {
+                    public void xFunc() {
                         try {
                             sum += value_int(1);
                         } catch (SQLException e) {

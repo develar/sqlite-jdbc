@@ -42,7 +42,7 @@ public class BusyHandlerTest {
                     "wait_for_latch",
                     new Function() {
                         @Override
-                        protected void xFunc() throws SQLException {
+                        public void xFunc() throws SQLException {
                             lockedLatch.countDown();
                             try {
                                 completeLatch.await();

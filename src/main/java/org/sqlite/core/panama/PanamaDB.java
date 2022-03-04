@@ -87,6 +87,12 @@ public interface PanamaDB extends Passport {
     MemoryAddress sqlite3_value_blob(MemoryAddress addr);
     int sqlite3_value_bytes(MemoryAddress addr);
     int sqlite3_value_type(MemoryAddress addr);
+    void sqlite3_result_error(MemoryAddress context, String msg, int msg_nbytes);
+
+    void sqlite3_progress_handler(long sqliteHandle, int vmCalls, MemoryAddress func, MemoryAddress empty);
+    void sqlite3_commit_hook(long sqliteHandle, MemoryAddress func, MemoryAddress empty);
+    void sqlite3_rollback_hook(long sqliteHandle, MemoryAddress func, MemoryAddress empty);
+    void sqlite3_update_hook(long sqliteHandle, MemoryAddress func, MemoryAddress empty);
 
     int sqlite3_column_bytes(long stmt, int iCol);
 
@@ -130,4 +136,18 @@ public interface PanamaDB extends Passport {
                                        MemoryAddress xInverse, //xInverse (long  context, int, sqlite_value**);
                                        MemoryAddress xDestroy); // xDestroy(void*)
 
+    int sqlite3_limit(long sqliteHandle, int id, int value);
+
+    int sqlite3_strnicmp(String s, String s1, int count);
+    long sqlite3_backup_init(long addr, String name, long dbHandle, String dbName);
+    int sqlite3_backup_step(long handle, int n);
+    void sqlite3_backup_finish(long handle);
+    int sqlite3_errcode(long handle);
+    void sqlite3_sleep(int msec);
+
+    int sqlite3_create_collation(long handle, String zName, int eTextRep, MemoryAddress arg,
+                                 MemoryAddress func); // int func(MemoryAddress, int, MemoryAddress, int, MemoryAddress)
+
+    int sqlite3_table_column_metadata(long handle, String dbName, String table, String column, MemoryAddress type, MemoryAddress collationSeq,
+                                      @RefArg int[] notNull,  @RefArg int[] primary, @RefArg int[] autoinc);
 }
