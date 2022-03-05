@@ -283,7 +283,7 @@
             <version>${surefire.version}</version>
             <configuration>
               <argLine>
-                --enable-native-access jpassport
+                --enable-native-access jpassport,sqlite.jdbc
               </argLine>              <!--  If enabled, will run the GraalVM tracing agent while running tests  -->
 <!--              <argLine>-agentlib:native-image-agent=config-output-dir=META-INF/native-image</argLine>-->
               <excludes>

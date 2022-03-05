@@ -64,7 +64,9 @@ public class PanamaDBImpl extends DB {
         try {
 //            System.setProperty("jpassport.build.home", "C:\\code\\github\\sqlite-jdbc\\src\\main\\write");
             var p = SQLiteJDBCLoader.extractedLibraryName;
-            m_panama = PassportFactory.link(p.toString(), PanamaDB.class);
+//            m_panama = PassportFactory.link(p.toString(), PanamaDB.class);
+            m_panama = new PanamaDB_impl(PassportFactory.loadMethodHandles(p.toString(), PanamaDB.class));
+
             loadSucceeded = true;
         } catch (Throwable th) {
             th.printStackTrace();
