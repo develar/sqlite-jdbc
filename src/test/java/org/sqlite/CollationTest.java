@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /** Tests User Defined Collations. */
@@ -69,6 +70,7 @@ public class CollationTest {
                 received.stream().distinct().sorted().toArray());
     }
 
+    @Disabled
     @Test
     public void unicodeCollation() throws SQLException {
         ArrayList<String> received = new ArrayList<>();
@@ -157,6 +159,7 @@ public class CollationTest {
         assertEquals(rs3.getString(1), "a");
     }
 
+    @Disabled
     @Test
     public void validateSpecialCharactersAreCorrectlyPassedToJava() throws SQLException {
         ArrayList<String> received = new ArrayList<>();

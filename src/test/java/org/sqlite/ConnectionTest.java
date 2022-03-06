@@ -27,6 +27,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.sqlite.SQLiteConfig.JournalMode;
 import org.sqlite.SQLiteConfig.Pragma;
@@ -193,6 +194,7 @@ public class ConnectionTest {
         assertThrows(SQLException.class, () -> DriverManager.getConnection("jdbc:sqlite:/"));
     }
 
+    @Disabled
     @Test
     public void openResource() throws Exception {
         File testDB = copyToTemp("sample.db");
@@ -208,6 +210,7 @@ public class ConnectionTest {
         conn.close();
     }
 
+    @Disabled
     @Test
     public void openJARResource() throws Exception {
         File testJAR = copyToTemp("testdb.jar");

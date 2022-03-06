@@ -21,6 +21,7 @@ import java.sql.Statement;
 import java.util.StringTokenizer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /** These tests are designed to stress PreparedStatements on memory dbs. */
@@ -706,6 +707,7 @@ public class PrepStmtTest {
         }
     }
 
+    @Disabled
     @Test
     public void constraintExtendedResultCodeExecute() throws SQLException {
         assertEquals(

@@ -15,6 +15,7 @@ import java.sql.Statement;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class ErrorMessageTest {
@@ -126,6 +127,7 @@ public class ErrorMessageTest {
         conn.close();
     }
 
+    @Disabled
     @Test
     public void cantOpenDir() throws SQLException, IOException {
         File dir = File.createTempFile("error-message-test-cant-open-dir", "");
@@ -142,6 +144,7 @@ public class ErrorMessageTest {
                         || exception.getMessage().contains("[SQLITE_CANTOPEN_ISDIR]"));
     }
 
+    @Disabled
     @Test
     public void shouldUsePlainErrorCodeAsVendorCodeAndExtendedAsResultCode()
             throws SQLException, IOException {
