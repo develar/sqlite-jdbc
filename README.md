@@ -13,7 +13,7 @@ written to use the new APIs and replace the JNI code.
 The new APIs are much easier to use than JNI - all native access is written in Java not C. The new APIs can 
 be considerably faster than JNI.
 
-This version of the library requires **Java 17 and only works on Windows**. Since the Panama
+This version of the library requires **Java 17 and 64 bit Windows or Linux**. Since the Panama
 APIs are still changing, and are different in each version of Java they have previewed, this
 project only works in Java 17 - no other versions will work.
 
@@ -25,19 +25,26 @@ than the standard JNI version. Performance in your system will depend on what JD
 the data types you are using. Primitive data types will tend to have higher performance gains than
 things like blobs and clobs. 
 
-### Known issues:
+# Known issues:
 
-1. The Panama API only works for Windows. If you use this code on other plaforms it falls back to JNI.
+1. The Panama API only works for Windows x86_64 and Linux x86_64. If you use this code on other platforms it falls back to JNI.
 2. There are currently 7 Unit tests failing. Most seem pretty benign. I can only get the unit tests to run from IntelliJ, they will not run from the maven step.
 
 There is no reason that this project would not work using Panama on all platforms. I just don't have
-the SQLite libraries built for other platforms. The SQLite website only provides the Windows DLLs. 
+the SQLite libraries built for other platforms. If you would like to try this code on a new platform then you'll need to:
 
-### Using this code
+1. Download the [SQLite Amagamation source](https://www.sqlite.org/download.html)
+2. Compile using a command like:
+
+```
+gcc -D SQLITE_ENABLE_COLUMN_METADATA -shared sqlite3.c
+```
+
+## Using this code
 
 You will need some small changes to your code/environment to use this code:
 
-#### Code changes
+### Code changes
 You must call:
 
 ```Java
@@ -46,13 +53,15 @@ Class.forName("org.sqlite.JDBC");
 
 (something about making the jar a module stopped auto-loading the driver.)
 
-#### Environment changes
+### Environment changes
 1. Add jpassport-v0.5.0-alpha.jar to the module path
 2. Add the following to your command line: 
 
 ```
 --enable-native-access jpassport,sqlite.jdbc
 ```
+
+**The remaining documentation was written by the xerial team....**
 
 SQLITE JDBC Driver
 ==================
