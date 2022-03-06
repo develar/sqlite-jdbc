@@ -116,6 +116,20 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${surefire.version}</version>
+        <configuration><argLine>
+          --enable-native-access jpassport,sqlite.jdbc
+        </argLine>
+          <excludes>
+            <!--  Cannot run in native mode, classes under test cannot be found, class path is empty  -->
+            <exclude>**/MultipleClassLoaderTest.java</exclude>
+            <!--  java.lang.NoSuchMethodError: org.sqlite.BusyHandlerTest$1.callback(I)I  -->
+<!--            <exclude>**/BusyHandlerTest</exclude>-->
+<!--            &lt;!&ndash;  java.sql.SQLException: Out of memory from JNI org.sqlite.core.NativeDB.throwex(NativeDB.java:510)  &ndash;&gt;-->
+<!--            <include>**/RSMetaDataTest</include>-->
+<!--            &lt;!&ndash;  SegFault  &ndash;&gt;-->
+<!--            <exclude>**/UDFCustomErrorTest.java</exclude>-->
+          </excludes>
+        </configuration>
       </plugin>
 
       <plugin>
@@ -282,9 +296,8 @@
             <artifactId>maven-surefire-plugin</artifactId>
             <version>${surefire.version}</version>
             <configuration>
-              <argLine>
-                --enable-native-access jpassport,sqlite.jdbc
-              </argLine>              <!--  If enabled, will run the GraalVM tracing agent while running tests  -->
+              <argLine>--enable-native-access jpassport,sqlite.jdbc</argLine>
+              <!--  If enabled, will run the GraalVM tracing agent while running tests  -->
 <!--              <argLine>-agentlib:native-image-agent=config-output-dir=META-INF/native-image</argLine>-->
               <excludes>
                 <!--  Cannot run in native mode, classes under test cannot be found, class path is empty  -->
