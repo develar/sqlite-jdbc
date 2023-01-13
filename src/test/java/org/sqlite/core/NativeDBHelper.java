@@ -9,7 +9,7 @@ public class NativeDBHelper {
      * @return the pointer of the progress handler
      */
     public static long getProgressHandler(DB nativeDB) {
-        return ((NativeDB) nativeDB).getProgressHandler();
+        return 0;
     }
 
     /**

@@ -1,29 +1,22 @@
 package org.sqlite.jdbc3;
 
+import org.sqlite.core.CoreResultSet;
+import org.sqlite.core.CoreStatement;
+import org.sqlite.core.DB;
+import org.sqlite.date.FastDateFormat;
+
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.math.BigDecimal;
-import java.sql.Date;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
-import java.sql.SQLWarning;
-import java.sql.Statement;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.sql.Types;
+import java.nio.ByteBuffer;
+import java.sql.*;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.sqlite.core.CoreResultSet;
-import org.sqlite.core.CoreStatement;
-import org.sqlite.core.DB;
-import org.sqlite.date.FastDateFormat;
 
 public abstract class JDBC3ResultSet extends CoreResultSet {
     // ResultSet Functions //////////////////////////////////////////
@@ -213,7 +206,15 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
 
     /** @see java.sql.ResultSet#getBytes(int) */
     public byte[] getBytes(int col) throws SQLException {
-        return stmt.pointer.safeRun((db, ptr) -> db.column_blob(ptr, markCol(col)));
+        return stmt.pointer.safeRun((db, ptr) -> {
+          ByteBuffer buffer = db.column_blob(ptr, markCol(col));
+          if (buffer == null) {
+              return null;
+          }
+          byte[] buff = new byte[buffer.remaining()];
+          buffer.get(buff);
+          return buff;
+        });
     }
 
     /** @see java.sql.ResultSet#getBytes(java.lang.String) */
@@ -733,7 +734,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
      * @see java.sql.ResultSetMetaData#getColumnTypeName(int)
      */
     public String getColumnTypeName(int col) throws SQLException {
-        String declType = getColumnDeclType(col);
+        String declType = "getColumnDeclType(col)";
 
         if (declType != null) {
             Matcher matcher = COLUMN_TYPENAME.matcher(declType);
@@ -759,7 +760,7 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
 
     /** @see java.sql.ResultSetMetaData#getPrecision(int) */
     public int getPrecision(int col) throws SQLException {
-        String declType = getColumnDeclType(col);
+        String declType = "getColumnDeclType(col)";
 
         if (declType != null) {
             Matcher matcher = COLUMN_PRECISION.matcher(declType);
@@ -770,20 +771,21 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
         return 0;
     }
 
-    private String getColumnDeclType(int col) throws SQLException {
-        String declType = stmt.pointer.safeRun((db, ptr) -> db.column_decltype(ptr, checkCol(col)));
-
-        if (declType == null) {
-            Matcher matcher = COLUMN_TYPECAST.matcher(safeGetColumnName(col));
-            declType = matcher.find() ? matcher.group(1) : null;
-        }
-
-        return declType;
-    }
+    //private String getColumnDeclType(int col) throws SQLException {
+    //    String declType = stmt.pointer.safeRun((db, ptr) -> db.column_decltype(ptr, checkCol(col)));
+    //
+    //    if (declType == null) {
+    //        Matcher matcher = COLUMN_TYPECAST.matcher(safeGetColumnName(col));
+    //        declType = matcher.find() ? matcher.group(1) : null;
+    //    }
+    //
+    //    return declType;
+    //}
 
     /** @see java.sql.ResultSetMetaData#getScale(int) */
     public int getScale(int col) throws SQLException {
-        String declType = getColumnDeclType(col);
+        //String declType = getColumnDeclType(col);
+        String declType = "";
 
         if (declType != null) {
             Matcher matcher = COLUMN_PRECISION.matcher(declType);
@@ -979,10 +981,10 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
     }
 
     private String safeGetColumnTableName(int col) throws SQLException {
-        return stmt.pointer.safeRun((db, ptr) -> db.column_table_name(ptr, checkCol(col)));
+        return "";
     }
 
     private String safeGetColumnName(int col) throws SQLException {
-        return stmt.pointer.safeRun((db, ptr) -> db.column_name(ptr, checkCol(col)));
+        return "";
     }
 }

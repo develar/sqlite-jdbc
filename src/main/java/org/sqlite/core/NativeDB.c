@@ -53,7 +53,7 @@ static jmethodID w_mth_inverse = 0;
 static jmethodID w_mth_xvalue = 0;
 
 static jclass pclass = 0;
-static jclass phandleclass = 0;
+//static jclass phandleclass = 0;
 static jmethodID pmethod = 0;
 
 static jmethodID exp_msg = 0;
@@ -427,11 +427,15 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 {
     JNIEnv* env = 0;
 
-    if (JNI_OK != (*vm)->GetEnv(vm, (void **)&env, JNI_VERSION_1_2))
-        return JNI_ERR;
+    if (JNI_OK != (*vm)->GetEnv(vm, (void **)&env, JNI_VERSION_1_2)) {
+						return JNI_ERR;
+				}
 
-    dbclass = (*env)->FindClass(env, "org/sqlite/core/NativeDB");
-    if (!dbclass) return JNI_ERR;
+    dbclass = (*env)->FindClass(env, "org/jetbrains/sqlite/NativeDB");
+    if (!dbclass) {
+    		return JNI_ERR;
+    }
+
     dbclass = (*env)->NewWeakGlobalRef(env, dbclass);
     dbpointer = (*env)->GetFieldID(env, dbclass, "pointer", "J");
     mth_stringToUtf8ByteArray = (*env)->GetStaticMethodID(
@@ -440,7 +444,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     mth_throwexcode = (*env)->GetMethodID(env, dbclass, "throwex", "(I)V");
     mth_throwexmsg = (*env)->GetStaticMethodID(env, dbclass, "throwex", "(Ljava/lang/String;)V");
 
-    fclass = (*env)->FindClass(env, "org/sqlite/Function");
+    fclass = (*env)->FindClass(env, "org/jetbrains/sqlite/Function");
     if (!fclass) return JNI_ERR;
     fclass = (*env)->NewWeakGlobalRef(env, fclass);
     func_context = (*env)->GetFieldID(env, fclass, "context", "J");
@@ -448,38 +452,38 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     func_args  = (*env)->GetFieldID(env, fclass, "args", "I");
     fmethod = (*env)->GetMethodID(env, fclass, "xFunc", "()V");
 
-    cclass = (*env)->FindClass(env, "org/sqlite/Collation");
+    cclass = (*env)->FindClass(env, "org/jetbrains/sqlite/Collation");
     if (!cclass) return JNI_ERR;
     cclass = (*env)->NewWeakGlobalRef(env, cclass);
     mth_compare = (*env)->GetMethodID(env, cclass, "xCompare", "(Ljava/lang/String;Ljava/lang/String;)I");
 
-    aclass = (*env)->FindClass(env, "org/sqlite/Function$Aggregate");
+    aclass = (*env)->FindClass(env, "org/jetbrains/sqlite/Function$Aggregate");
     if (!aclass) return JNI_ERR;
     aclass = (*env)->NewWeakGlobalRef(env, aclass);
     mth_aggr_xstep = (*env)->GetMethodID(env, aclass, "xStep", "()V");
     mth_aggr_xfinal = (*env)->GetMethodID(env, aclass, "xFinal", "()V");
     aclone = (*env)->GetMethodID(env, aclass, "clone", "()Ljava/lang/Object;");
 
-    wclass = (*env)->FindClass(env, "org/sqlite/Function$Window");
+    wclass = (*env)->FindClass(env, "org/jetbrains/sqlite/Function$Window");
     if (!wclass) return JNI_ERR;
     wclass = (*env)->NewWeakGlobalRef(env, wclass);
     w_mth_inverse = (*env)->GetMethodID(env, wclass, "xInverse", "()V");
     w_mth_xvalue = (*env)->GetMethodID(env, wclass, "xValue", "()V");
 
-    pclass = (*env)->FindClass(env, "org/sqlite/core/DB$ProgressObserver");
+    pclass = (*env)->FindClass(env, "org/jetbrains/sqlite/SqliteDb$ProgressObserver");
     if(!pclass) return JNI_ERR;
     pclass = (*env)->NewWeakGlobalRef(env, pclass);
     pmethod = (*env)->GetMethodID(env, pclass, "progress", "(II)V");
 
-    phandleclass = (*env)->FindClass(env, "org/sqlite/ProgressHandler");
-    if(!phandleclass) return JNI_ERR;
-    phandleclass = (*env)->NewWeakGlobalRef(env, phandleclass);
+//    phandleclass = (*env)->FindClass(env, "org/jetbrains/sqlite/ProgressHandler");
+//    if(!phandleclass) return JNI_ERR;
+//    phandleclass = (*env)->NewWeakGlobalRef(env, phandleclass);
 
     jclass exclass = (*env)->FindClass(env, "java/lang/Throwable");
     exp_msg = (*env)->GetMethodID(
             env, exclass, "toString", "()Ljava/lang/String;");
 
-    return JNI_VERSION_1_2;
+    return JNI_VERSION_10;
 }
 
 // FINALIZATION
@@ -502,20 +506,20 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved) {
 
     if (pclass) (*env)->DeleteWeakGlobalRef(env, pclass);
 
-    if (phandleclass) (*env)->DeleteWeakGlobalRef(env, phandleclass);
+//    if (phandleclass) (*env)->DeleteWeakGlobalRef(env, phandleclass);
 }
 
 
 // WRAPPERS for sqlite_* functions //////////////////////////////////
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_shared_1cache(
-        JNIEnv *env, jobject this, jboolean enable)
-{
-    return sqlite3_enable_shared_cache(enable ? 1 : 0);
-}
+//JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_shared_1cache(
+//        JNIEnv *env, jobject this, jboolean enable)
+//{
+//    return sqlite3_enable_shared_cache(enable ? 1 : 0);
+//}
 
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_enable_1load_1extension(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_enable_1load_1extension(
         JNIEnv *env, jobject this, jboolean enable)
 {
     sqlite3 *db = gethandle(env, this);
@@ -529,22 +533,30 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_enable_1load_1extension(
 }
 
 
-JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB__1open_1utf8(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB__1open(
         JNIEnv *env, jobject this, jbyteArray file, jint flags)
 {
-    sqlite3 *db;
     int ret;
+    sqlite3 *db;
     char *file_bytes;
+
+				// compiled with SQLITE_OMIT_AUTOINIT
+				ret = sqlite3_initialize();
+    if (ret != SQLITE_OK) {
+      return ret;
+    }
 
     db = gethandle(env, this);
     if (db) {
         throwex_msg(env, "DB already open");
         sqlite3_close(db);
-        return;
+        return SQLITE_ERROR;
     }
 
     utf8JavaByteArrayToUtf8Bytes(env, file, &file_bytes, NULL);
-    if (!file_bytes) return;
+    if (!file_bytes) {
+    		return SQLITE_ERROR;
+    }
 
     ret = sqlite3_open_v2(file_bytes, &db, flags, NULL);
     freeUtf8Bytes(file_bytes);
@@ -555,14 +567,15 @@ JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB__1open_1utf8(
         throwex_errorcode(env, this, ret);
         sethandle(env, this, 0); // The handle is needed for throwex_errorcode
         sqlite3_close(db);
-        return;
+        return SQLITE_ERROR;
     }
 
     // Ignore failures, as we can tolerate regular result codes.
     (void) sqlite3_extended_result_codes(db, 1);
+    return SQLITE_OK;
 }
 
-JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_interrupt(JNIEnv *env, jobject this)
+JNIEXPORT void JNICALL Java_org_jetbrains_sqlite_NativeDB_interrupt(JNIEnv *env, jobject this)
 {
     sqlite3 *db = gethandle(env, this);
     if (!db)
@@ -574,7 +587,7 @@ JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_interrupt(JNIEnv *env, jobj
     sqlite3_interrupt(db);
 }
 
-JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_busy_1timeout(
+JNIEXPORT void JNICALL Java_org_jetbrains_sqlite_NativeDB_busy_1timeout(
     JNIEnv *env, jobject this, jint ms)
 {
     sqlite3 *db = gethandle(env, this);
@@ -631,12 +644,12 @@ void change_busy_handler(JNIEnv *env, jobject nativeDB, jobject busyHandler)
     set_new_handler(env, nativeDB, "busyHandler", busyHandlerContext, &free_busy_handler);
 }
 
-JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_busy_1handler(
+JNIEXPORT void JNICALL Java_org_jetbrains_sqlite_NativeDB_busy_1handler(
     JNIEnv *env, jobject nativeDB, jobject busyHandler) {
     change_busy_handler(env, nativeDB, busyHandler);
 }
 
-JNIEXPORT jlong JNICALL Java_org_sqlite_core_NativeDB_prepare_1utf8(
+JNIEXPORT jlong JNICALL Java_org_jetbrains_sqlite_NativeDB_prepare_1utf8(
         JNIEnv *env, jobject this, jbyteArray sql)
 {
     sqlite3* db;
@@ -666,7 +679,7 @@ JNIEXPORT jlong JNICALL Java_org_sqlite_core_NativeDB_prepare_1utf8(
 }
 
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB__1exec_1utf8(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB__1exec_1utf8(
         JNIEnv *env, jobject this, jbyteArray sql)
 {
     sqlite3* db;
@@ -697,7 +710,7 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB__1exec_1utf8(
 }
 
 
-JNIEXPORT jobject JNICALL Java_org_sqlite_core_NativeDB_errmsg_1utf8(JNIEnv *env, jobject this)
+JNIEXPORT jobject JNICALL Java_org_jetbrains_sqlite_NativeDB_errmsg_1utf8(JNIEnv *env, jobject this)
 {
     sqlite3 *db;
     const char *str;
@@ -714,14 +727,14 @@ JNIEXPORT jobject JNICALL Java_org_sqlite_core_NativeDB_errmsg_1utf8(JNIEnv *env
     return utf8BytesToDirectByteBuffer(env, str, strlen(str));
 }
 
-JNIEXPORT jobject JNICALL Java_org_sqlite_core_NativeDB_libversion_1utf8(
+JNIEXPORT jobject JNICALL Java_org_jetbrains_sqlite_NativeDB_libversion_1utf8(
         JNIEnv *env, jobject this)
 {
     const char* version = sqlite3_libversion();
     return utf8BytesToDirectByteBuffer(env, version, strlen(version));
 }
 
-JNIEXPORT jlong JNICALL Java_org_sqlite_core_NativeDB_changes(
+JNIEXPORT jlong JNICALL Java_org_jetbrains_sqlite_NativeDB_changes(
         JNIEnv *env, jobject this)
 {
     sqlite3 *db = gethandle(env, this);
@@ -734,7 +747,7 @@ JNIEXPORT jlong JNICALL Java_org_sqlite_core_NativeDB_changes(
     return sqlite3_changes64(db);
 }
 
-JNIEXPORT jlong JNICALL Java_org_sqlite_core_NativeDB_total_1changes(
+JNIEXPORT jlong JNICALL Java_org_jetbrains_sqlite_NativeDB_total_1changes(
         JNIEnv *env, jobject this)
 {
     sqlite3 *db = gethandle(env, this);
@@ -747,7 +760,7 @@ JNIEXPORT jlong JNICALL Java_org_sqlite_core_NativeDB_total_1changes(
     return sqlite3_total_changes64(db);
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_finalize(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_finalize(
         JNIEnv *env, jobject this, jlong stmt)
 {
     if (!stmt)
@@ -759,7 +772,7 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_finalize(
     return sqlite3_finalize(toref(stmt));
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_step(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_step(
         JNIEnv *env, jobject this, jlong stmt)
 {
     if (!stmt)
@@ -771,7 +784,7 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_step(
     return sqlite3_step(toref(stmt));
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_reset(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_reset(
         JNIEnv *env, jobject this, jlong stmt)
 {
     if (!stmt)
@@ -783,7 +796,7 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_reset(
     return sqlite3_reset(toref(stmt));
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_clear_1bindings(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_clear_1bindings(
         JNIEnv *env, jobject this, jlong stmt)
 {
     if (!stmt)
@@ -795,7 +808,7 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_clear_1bindings(
     return sqlite3_clear_bindings(toref(stmt));
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_bind_1parameter_1count(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_bind_1parameter_1count(
         JNIEnv *env, jobject this, jlong stmt)
 {
     if (!stmt)
@@ -807,7 +820,7 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_bind_1parameter_1count(
     return sqlite3_bind_parameter_count(toref(stmt));
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_column_1count(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_column_1count(
         JNIEnv *env, jobject this, jlong stmt)
 {
     if (!stmt)
@@ -819,7 +832,7 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_column_1count(
     return sqlite3_column_count(toref(stmt));
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_column_1type(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_column_1type(
         JNIEnv *env, jobject this, jlong stmt, jint col)
 {
     if (!stmt)
@@ -831,56 +844,40 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_column_1type(
     return sqlite3_column_type(toref(stmt), col);
 }
 
-JNIEXPORT jobject JNICALL Java_org_sqlite_core_NativeDB_column_1decltype_1utf8(
-        JNIEnv *env, jobject this, jlong stmt, jint col)
-{
-    const char *str;
+//JNIEXPORT jobject JNICALL Java_org_jetbrains_sqlite_NativeDB_column_1table_1name_1utf8(
+//        JNIEnv *env, jobject this, jlong stmt, jint col)
+//{
+//    const char *str;
+//
+//    if (!stmt)
+//    {
+//        throwex_stmt_finalized(env);
+//        return NULL;
+//    }
+//
+//    str = sqlite3_column_table_name(toref(stmt), col);
+//    if (!str) return NULL;
+//    return utf8BytesToDirectByteBuffer(env, str, strlen(str));
+//}
 
-    if (!stmt)
-    {
-        throwex_stmt_finalized(env);
-        return NULL;
-    }
+//JNIEXPORT jobject JNICALL Java_org_jetbrains_sqlite_NativeDB_column_1name_1utf8(
+//        JNIEnv *env, jobject this, jlong stmt, jint col)
+//{
+//    const char *str;
+//
+//    if (!stmt)
+//    {
+//        throwex_stmt_finalized(env);
+//        return NULL;
+//    }
+//
+//    str = sqlite3_column_name(toref(stmt), col);
+//    if (!str) return NULL;
+//
+//    return utf8BytesToDirectByteBuffer(env, str, strlen(str));
+//}
 
-    str = (const char*) sqlite3_column_decltype(toref(stmt), col);
-    if (!str) return NULL;
-    return utf8BytesToDirectByteBuffer(env, str, strlen(str));
-}
-
-JNIEXPORT jobject JNICALL Java_org_sqlite_core_NativeDB_column_1table_1name_1utf8(
-        JNIEnv *env, jobject this, jlong stmt, jint col)
-{
-    const char *str;
-
-    if (!stmt)
-    {
-        throwex_stmt_finalized(env);
-        return NULL;
-    }
-
-    str = sqlite3_column_table_name(toref(stmt), col);
-    if (!str) return NULL;
-    return utf8BytesToDirectByteBuffer(env, str, strlen(str));
-}
-
-JNIEXPORT jobject JNICALL Java_org_sqlite_core_NativeDB_column_1name_1utf8(
-        JNIEnv *env, jobject this, jlong stmt, jint col)
-{
-    const char *str;
-
-    if (!stmt)
-    {
-        throwex_stmt_finalized(env);
-        return NULL;
-    }
-
-    str = sqlite3_column_name(toref(stmt), col);
-    if (!str) return NULL;
-
-    return utf8BytesToDirectByteBuffer(env, str, strlen(str));
-}
-
-JNIEXPORT jobject JNICALL Java_org_sqlite_core_NativeDB_column_1text_1utf8(
+JNIEXPORT jobject JNICALL Java_org_jetbrains_sqlite_NativeDB_column_1text_1utf8(
         JNIEnv *env, jobject this, jlong stmt, jint col)
 {
     sqlite3 *db;
@@ -912,7 +909,7 @@ JNIEXPORT jobject JNICALL Java_org_sqlite_core_NativeDB_column_1text_1utf8(
     return utf8BytesToDirectByteBuffer(env, bytes, nbytes);
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_sqlite_core_NativeDB_column_1blob(
+JNIEXPORT jbyteArray JNICALL Java_org_jetbrains_sqlite_NativeDB_column_1blob(
         JNIEnv *env, jobject this, jlong stmt, jint col)
 {
     sqlite3 *db;
@@ -963,7 +960,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_sqlite_core_NativeDB_column_1blob(
     return jBlob;
 }
 
-JNIEXPORT jdouble JNICALL Java_org_sqlite_core_NativeDB_column_1double(
+JNIEXPORT jdouble JNICALL Java_org_jetbrains_sqlite_NativeDB_column_1double(
         JNIEnv *env, jobject this, jlong stmt, jint col)
 {
     if (!stmt)
@@ -975,7 +972,7 @@ JNIEXPORT jdouble JNICALL Java_org_sqlite_core_NativeDB_column_1double(
     return sqlite3_column_double(toref(stmt), col);
 }
 
-JNIEXPORT jlong JNICALL Java_org_sqlite_core_NativeDB_column_1long(
+JNIEXPORT jlong JNICALL Java_org_jetbrains_sqlite_NativeDB_column_1long(
         JNIEnv *env, jobject this, jlong stmt, jint col)
 {
     if (!stmt)
@@ -987,7 +984,7 @@ JNIEXPORT jlong JNICALL Java_org_sqlite_core_NativeDB_column_1long(
     return sqlite3_column_int64(toref(stmt), col);
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_column_1int(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_column_1int(
         JNIEnv *env, jobject this, jlong stmt, jint col)
 {
     if (!stmt)
@@ -999,7 +996,7 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_column_1int(
     return sqlite3_column_int(toref(stmt), col);
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_bind_1null(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_bind_1null(
         JNIEnv *env, jobject this, jlong stmt, jint pos)
 {
     if (!stmt)
@@ -1011,7 +1008,7 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_bind_1null(
     return sqlite3_bind_null(toref(stmt), pos);
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_bind_1int(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_bind_1int(
         JNIEnv *env, jobject this, jlong stmt, jint pos, jint v)
 {
     if (!stmt)
@@ -1023,7 +1020,7 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_bind_1int(
     return sqlite3_bind_int(toref(stmt), pos, v);
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_bind_1long(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_bind_1long(
         JNIEnv *env, jobject this, jlong stmt, jint pos, jlong v)
 {
     if (!stmt)
@@ -1035,7 +1032,7 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_bind_1long(
     return sqlite3_bind_int64(toref(stmt), pos, v);
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_bind_1double(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_bind_1double(
         JNIEnv *env, jobject this, jlong stmt, jint pos, jdouble v)
 {
     if (!stmt)
@@ -1047,7 +1044,7 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_bind_1double(
     return sqlite3_bind_double(toref(stmt), pos, v);
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_bind_1text_1utf8(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_bind_1text_1utf8(
         JNIEnv *env, jobject this, jlong stmt, jint pos, jbyteArray v)
 {
     int rc;
@@ -1069,7 +1066,7 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_bind_1text_1utf8(
     return rc;
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_bind_1blob(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_bind_1blob(
         JNIEnv *env, jobject this, jlong stmt, jint pos, jbyteArray v)
 {
     jint rc;
@@ -1090,14 +1087,14 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_bind_1blob(
     return rc;
 }
 
-JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_result_1null(
+JNIEXPORT void JNICALL Java_org_jetbrains_sqlite_NativeDB_result_1null(
         JNIEnv *env, jobject this, jlong context)
 {
     if (!context) return;
     sqlite3_result_null(toref(context));
 }
 
-JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_result_1text_1utf8(
+JNIEXPORT void JNICALL Java_org_jetbrains_sqlite_NativeDB_result_1text_1utf8(
         JNIEnv *env, jobject this, jlong context, jbyteArray value)
 {
     char* value_bytes;
@@ -1117,7 +1114,7 @@ JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_result_1text_1utf8(
     freeUtf8Bytes(value_bytes);
 }
 
-JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_result_1blob(
+JNIEXPORT void JNICALL Java_org_jetbrains_sqlite_NativeDB_result_1blob(
         JNIEnv *env, jobject this, jlong context, jobject value)
 {
     jbyte *bytes;
@@ -1133,28 +1130,28 @@ JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_result_1blob(
     (*env)->ReleasePrimitiveArrayCritical(env, value, bytes, JNI_ABORT);
 }
 
-JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_result_1double(
+JNIEXPORT void JNICALL Java_org_jetbrains_sqlite_NativeDB_result_1double(
         JNIEnv *env, jobject this, jlong context, jdouble value)
 {
     if (!context) return;
     sqlite3_result_double(toref(context), value);
 }
 
-JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_result_1long(
+JNIEXPORT void JNICALL Java_org_jetbrains_sqlite_NativeDB_result_1long(
         JNIEnv *env, jobject this, jlong context, jlong value)
 {
     if (!context) return;
     sqlite3_result_int64(toref(context), value);
 }
 
-JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_result_1int(
+JNIEXPORT void JNICALL Java_org_jetbrains_sqlite_NativeDB_result_1int(
         JNIEnv *env, jobject this, jlong context, jint value)
 {
     if (!context) return;
     sqlite3_result_int(toref(context), value);
 }
 
-JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_result_1error_1utf8(
+JNIEXPORT void JNICALL Java_org_jetbrains_sqlite_NativeDB_result_1error_1utf8(
         JNIEnv *env, jobject this, jlong context, jbyteArray err)
 {
     char* err_bytes;
@@ -1173,7 +1170,7 @@ JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_result_1error_1utf8(
     freeUtf8Bytes(err_bytes);
 }
 
-JNIEXPORT jobject JNICALL Java_org_sqlite_core_NativeDB_value_1text_1utf8(
+JNIEXPORT jobject JNICALL Java_org_jetbrains_sqlite_NativeDB_value_1text_1utf8(
         JNIEnv *env, jobject this, jobject f, jint arg)
 {
     const char* bytes;
@@ -1188,7 +1185,7 @@ JNIEXPORT jobject JNICALL Java_org_sqlite_core_NativeDB_value_1text_1utf8(
     return utf8BytesToDirectByteBuffer(env, bytes, nbytes);
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_sqlite_core_NativeDB_value_1blob(
+JNIEXPORT jbyteArray JNICALL Java_org_jetbrains_sqlite_NativeDB_value_1blob(
         JNIEnv *env, jobject this, jobject f, jint arg)
 {
     int length;
@@ -1209,28 +1206,28 @@ JNIEXPORT jbyteArray JNICALL Java_org_sqlite_core_NativeDB_value_1blob(
     return jBlob;
 }
 
-JNIEXPORT jdouble JNICALL Java_org_sqlite_core_NativeDB_value_1double(
+JNIEXPORT jdouble JNICALL Java_org_jetbrains_sqlite_NativeDB_value_1double(
         JNIEnv *env, jobject this, jobject f, jint arg)
 {
     sqlite3_value *value = tovalue(env, f, arg);
     return value ? sqlite3_value_double(value) : 0;
 }
 
-JNIEXPORT jlong JNICALL Java_org_sqlite_core_NativeDB_value_1long(
+JNIEXPORT jlong JNICALL Java_org_jetbrains_sqlite_NativeDB_value_1long(
         JNIEnv *env, jobject this, jobject f, jint arg)
 {
     sqlite3_value *value = tovalue(env, f, arg);
     return value ? sqlite3_value_int64(value) : 0;
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_value_1int(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_value_1int(
         JNIEnv *env, jobject this, jobject f, jint arg)
 {
     sqlite3_value *value = tovalue(env, f, arg);
     return value ? sqlite3_value_int(value) : 0;
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_value_1type(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_value_1type(
         JNIEnv *env, jobject this, jobject func, jint arg)
 {
     return sqlite3_value_type(tovalue(env, func, arg));
@@ -1254,7 +1251,7 @@ void free_udf_func(void *udfToFree) {
     free(udf);
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_create_1function_1utf8(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_create_1function_1utf8(
         JNIEnv *env, jobject nativeDB, jbyteArray name, jobject func, jint nArgs, jint flags)
 {
     jint ret = 0;
@@ -1305,7 +1302,7 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_create_1function_1utf8(
     return ret;
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_destroy_1function_1utf8(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_destroy_1function_1utf8(
         JNIEnv *env, jobject nativeDB, jbyteArray name)
 {
     jint ret = 0;
@@ -1322,7 +1319,7 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_destroy_1function_1utf8(
     return ret;
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_create_1collation_1utf8(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_create_1collation_1utf8(
         JNIEnv *env, jobject this, jbyteArray name, jobject func)
 {
     jint ret = 0;
@@ -1352,7 +1349,7 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_create_1collation_1utf8(
     return ret;
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_destroy_1collation_1utf8(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_destroy_1collation_1utf8(
         JNIEnv *env, jobject this, jbyteArray name)
 {
     jint ret = 0;
@@ -1369,7 +1366,7 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_destroy_1collation_1utf8(
     return ret;
 }
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_limit(JNIEnv *env, jobject this, jint id, jint value)
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_limit(JNIEnv *env, jobject this, jint id, jint value)
 {
     sqlite3* db;
 
@@ -1386,73 +1383,73 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_limit(JNIEnv *env, jobject 
 
 // COMPOUND FUNCTIONS ///////////////////////////////////////////////
 
-JNIEXPORT jobjectArray JNICALL Java_org_sqlite_core_NativeDB_column_1metadata(
-        JNIEnv *env, jobject this, jlong stmt)
-{
-    const char *zTableName, *zColumnName;
-    int pNotNull, pPrimaryKey, pAutoinc, i, colCount;
-    jobjectArray array;
-    jbooleanArray colData;
-    jboolean* colDataRaw;
-    sqlite3 *db;
-    sqlite3_stmt *dbstmt;
-
-    db = gethandle(env, this);
-    if (!db)
-    {
-        throwex_db_closed(env);
-        return NULL;
-    }
-
-    if (!stmt)
-    {
-        throwex_stmt_finalized(env);
-        return NULL;
-    }
-
-    dbstmt = toref(stmt);
-
-    colCount = sqlite3_column_count(dbstmt);
-    array = (*env)->NewObjectArray(
-        env, colCount, (*env)->FindClass(env, "[Z"), NULL) ;
-    if (!array) { throwex_outofmemory(env); return 0; }
-
-    colDataRaw = (jboolean*)malloc(3 * sizeof(jboolean));
-    if (!colDataRaw) { throwex_outofmemory(env); return 0; }
-
-    for (i = 0; i < colCount; i++) {
-        // load passed column name and table name
-        zColumnName = sqlite3_column_name(dbstmt, i);
-        zTableName  = sqlite3_column_table_name(dbstmt, i);
-
-        pNotNull = 0;
-        pPrimaryKey = 0;
-        pAutoinc = 0;
-
-        // request metadata for column and load into output variables
-        if (zTableName && zColumnName) {
-            sqlite3_table_column_metadata(
-                db, 0, zTableName, zColumnName,
-                0, 0, &pNotNull, &pPrimaryKey, &pAutoinc
-            );
-        }
-
-        // load relevant metadata into 2nd dimension of return results
-        colDataRaw[0] = pNotNull;
-        colDataRaw[1] = pPrimaryKey;
-        colDataRaw[2] = pAutoinc;
-
-        colData = (*env)->NewBooleanArray(env, 3);
-        if (!colData) { throwex_outofmemory(env); return 0; }
-
-        (*env)->SetBooleanArrayRegion(env, colData, 0, 3, colDataRaw);
-        (*env)->SetObjectArrayElement(env, array, i, colData);
-    }
-
-    free(colDataRaw);
-
-    return array;
-}
+//JNIEXPORT jobjectArray JNICALL Java_org_jetbrains_sqlite_NativeDB_column_1metadata(
+//        JNIEnv *env, jobject this, jlong stmt)
+//{
+//    const char *zTableName, *zColumnName;
+//    int pNotNull, pPrimaryKey, pAutoinc, i, colCount;
+//    jobjectArray array;
+//    jbooleanArray colData;
+//    jboolean* colDataRaw;
+//    sqlite3 *db;
+//    sqlite3_stmt *dbstmt;
+//
+//    db = gethandle(env, this);
+//    if (!db)
+//    {
+//        throwex_db_closed(env);
+//        return NULL;
+//    }
+//
+//    if (!stmt)
+//    {
+//        throwex_stmt_finalized(env);
+//        return NULL;
+//    }
+//
+//    dbstmt = toref(stmt);
+//
+//    colCount = sqlite3_column_count(dbstmt);
+//    array = (*env)->NewObjectArray(
+//        env, colCount, (*env)->FindClass(env, "[Z"), NULL) ;
+//    if (!array) { throwex_outofmemory(env); return 0; }
+//
+//    colDataRaw = (jboolean*)malloc(3 * sizeof(jboolean));
+//    if (!colDataRaw) { throwex_outofmemory(env); return 0; }
+//
+//    for (i = 0; i < colCount; i++) {
+//        // load passed column name and table name
+//        zColumnName = sqlite3_column_name(dbstmt, i);
+//        zTableName  = sqlite3_column_table_name(dbstmt, i);
+//
+//        pNotNull = 0;
+//        pPrimaryKey = 0;
+//        pAutoinc = 0;
+//
+//        // request metadata for column and load into output variables
+//        if (zTableName && zColumnName) {
+//            sqlite3_table_column_metadata(
+//                db, 0, zTableName, zColumnName,
+//                0, 0, &pNotNull, &pPrimaryKey, &pAutoinc
+//            );
+//        }
+//
+//        // load relevant metadata into 2nd dimension of return results
+//        colDataRaw[0] = pNotNull;
+//        colDataRaw[1] = pPrimaryKey;
+//        colDataRaw[2] = pAutoinc;
+//
+//        colData = (*env)->NewBooleanArray(env, 3);
+//        if (!colData) { throwex_outofmemory(env); return 0; }
+//
+//        (*env)->SetBooleanArrayRegion(env, colData, 0, 3, colDataRaw);
+//        (*env)->SetObjectArrayElement(env, array, i, colData);
+//    }
+//
+//    free(colDataRaw);
+//
+//    return array;
+//}
 
 // backup function
 
@@ -1529,7 +1526,7 @@ void copyLoop(JNIEnv *env, sqlite3_backup *pBackup, jobject progress,
 ** If the backup process is successfully completed, SQLITE_OK is returned.
 ** Otherwise, if an error occurs, an SQLite error code is returned.
 */
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_backup(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_backup(
   JNIEnv *env, jobject this, 
   jbyteArray zDBName,
   jbyteArray zFilename,       /* Name of file to back up to */
@@ -1600,7 +1597,7 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_backup(
 #endif
 } 
 
-JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_restore(
+JNIEXPORT jint JNICALL Java_org_jetbrains_sqlite_NativeDB_restore(
   JNIEnv *env, jobject this, 
   jbyteArray zDBName,
   jbyteArray zFilename,         /* Name of file to restore from */
@@ -1674,75 +1671,75 @@ JNIEXPORT jint JNICALL Java_org_sqlite_core_NativeDB_restore(
 
 // Progress handler
 
-struct ProgressHandlerContext {
-    JavaVM *vm;
-    jmethodID mth;
-    jobject phandler;
-};
+//struct ProgressHandlerContext {
+//    JavaVM *vm;
+//    jmethodID mth;
+//    jobject phandler;
+//};
 
-static void free_progress_handler(JNIEnv *env, void *toFree) {
-    struct ProgressHandlerContext* progressHandlerContext = (struct ProgressHandlerContext*) toFree;
-    (*env)->DeleteGlobalRef(env, progressHandlerContext->phandler);
-    free(toFree);
-}
+//static void free_progress_handler(JNIEnv *env, void *toFree) {
+//    struct ProgressHandlerContext* progressHandlerContext = (struct ProgressHandlerContext*) toFree;
+//    (*env)->DeleteGlobalRef(env, progressHandlerContext->phandler);
+//    free(toFree);
+//}
+//
+//static int progress_handler_function(void *ctx) {
+//    JNIEnv *env = 0;
+//    struct ProgressHandlerContext* progressHandlerContext = (struct ProgressHandlerContext*) ctx;
+//    (*progressHandlerContext->vm)->AttachCurrentThread(progressHandlerContext->vm, (void **)&env, 0);
+//    jint rv = (*env)->CallIntMethod(env, progressHandlerContext->phandler, progressHandlerContext->mth);
+//    return rv;
+//}
 
-static int progress_handler_function(void *ctx) {
-    JNIEnv *env = 0;
-    struct ProgressHandlerContext* progressHandlerContext = (struct ProgressHandlerContext*) ctx;
-    (*progressHandlerContext->vm)->AttachCurrentThread(progressHandlerContext->vm, (void **)&env, 0);
-    jint rv = (*env)->CallIntMethod(env, progressHandlerContext->phandler, progressHandlerContext->mth);
-    return rv;
-}
+//static void change_progress_handler(JNIEnv *env, jobject nativeDB, jobject progressHandler, jint vmCalls)
+//{
+//    sqlite3 *db;
+//
+//    db = gethandle(env, nativeDB);
+//    if (!db){
+//        throwex_db_closed(env);
+//        return;
+//    }
+//
+//    struct ProgressHandlerContext* progressHandlerContext = NULL;
+//
+//    if (progressHandler) {
+//        progressHandlerContext = (struct ProgressHandlerContext*) malloc(sizeof(struct ProgressHandlerContext));
+//        (*env)->GetJavaVM(env, &progressHandlerContext->vm);
+//
+//        progressHandlerContext->phandler = (*env)->NewGlobalRef(env, progressHandler);
+//        progressHandlerContext->mth = (*env)->GetMethodID(  env,
+//                                                   (*env)->GetObjectClass(env, progressHandlerContext->phandler),
+//                                                   "progress",
+//                                                   "()I");
+//    }
+//
+//    if (progressHandlerContext) {
+//        sqlite3_progress_handler(gethandle(env, nativeDB), vmCalls, &progress_handler_function, progressHandlerContext);
+//    } else {
+//        sqlite3_progress_handler(gethandle(env, nativeDB), 0, NULL, NULL);
+//    }
+//
+//    set_new_handler(env, nativeDB, "progressHandler", progressHandlerContext, &free_progress_handler);
+//}
 
-static void change_progress_handler(JNIEnv *env, jobject nativeDB, jobject progressHandler, jint vmCalls)
-{
-    sqlite3 *db;
-
-    db = gethandle(env, nativeDB);
-    if (!db){
-        throwex_db_closed(env);
-        return;
-    }
-
-    struct ProgressHandlerContext* progressHandlerContext = NULL;
-
-    if (progressHandler) {
-        progressHandlerContext = (struct ProgressHandlerContext*) malloc(sizeof(struct ProgressHandlerContext));
-        (*env)->GetJavaVM(env, &progressHandlerContext->vm);
-
-        progressHandlerContext->phandler = (*env)->NewGlobalRef(env, progressHandler);
-        progressHandlerContext->mth = (*env)->GetMethodID(  env,
-                                                   (*env)->GetObjectClass(env, progressHandlerContext->phandler),
-                                                   "progress",
-                                                   "()I");
-    }
-
-    if (progressHandlerContext) {
-        sqlite3_progress_handler(gethandle(env, nativeDB), vmCalls, &progress_handler_function, progressHandlerContext);
-    } else {
-        sqlite3_progress_handler(gethandle(env, nativeDB), 0, NULL, NULL);
-    }
-
-    set_new_handler(env, nativeDB, "progressHandler", progressHandlerContext, &free_progress_handler);
-}
-
-JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_register_1progress_1handler(
-  JNIEnv *env,
-  jobject nativeDB,
-  jint vmCalls,
-  jobject progressHandler
-)
-{
-    change_progress_handler(env, nativeDB, progressHandler, vmCalls);
-}
-
-JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_clear_1progress_1handler(
-  JNIEnv *env,
-  jobject nativeDB
-)
-{
-    change_progress_handler(env, nativeDB, NULL, 0);
-}
+//JNIEXPORT void JNICALL Java_org_jetbrains_sqlite_NativeDB_register_1progress_1handler(
+//  JNIEnv *env,
+//  jobject nativeDB,
+//  jint vmCalls,
+//  jobject progressHandler
+//)
+//{
+//    change_progress_handler(env, nativeDB, progressHandler, vmCalls);
+//}
+//
+//JNIEXPORT void JNICALL Java_org_jetbrains_sqlite_NativeDB_clear_1progress_1handler(
+//  JNIEnv *env,
+//  jobject nativeDB
+//)
+//{
+//    change_progress_handler(env, nativeDB, NULL, 0);
+//}
 
 // Update hook
 
@@ -1778,7 +1775,7 @@ static void clear_update_listener(JNIEnv *env, jobject nativeDB){
     set_new_handler(env, nativeDB, "updateListener", NULL, &free_update_handler);
 }
 
-JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_set_1update_1listener(JNIEnv *env, jobject nativeDB, jboolean enabled) {
+JNIEXPORT void JNICALL Java_org_jetbrains_sqlite_NativeDB_set_1update_1listener(JNIEnv *env, jobject nativeDB, jboolean enabled) {
     if (enabled) {
         struct UpdateHandlerContext* update_handler_context = (struct UpdateHandlerContext*) malloc(sizeof(struct UpdateHandlerContext));
         update_handler_context->method = (*env)->GetMethodID(env, dbclass, "onUpdate", "(ILjava/lang/String;Ljava/lang/String;J)V");
@@ -1826,7 +1823,7 @@ void clear_commit_listener(JNIEnv *env, jobject nativeDB, sqlite3 *db) {
     set_new_handler(env, nativeDB, "commitListener", NULL, freeCommitHandlerCtx);
 }
 
-JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_set_1commit_1listener(JNIEnv *env, jobject nativeDB, jboolean enabled) {
+JNIEXPORT void JNICALL Java_org_jetbrains_sqlite_NativeDB_set_1commit_1listener(JNIEnv *env, jobject nativeDB, jboolean enabled) {
     sqlite3 *db = gethandle(env, nativeDB);
     if (enabled) {
         struct CommitHandlerContext *commit_handler_context = (struct CommitHandlerContext*) malloc(sizeof(struct CommitHandlerContext));
@@ -1841,13 +1838,13 @@ JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB_set_1commit_1listener(JNIEn
     }
 }
 
-JNIEXPORT void JNICALL Java_org_sqlite_core_NativeDB__1close(
+JNIEXPORT void JNICALL Java_org_jetbrains_sqlite_NativeDB__1close(
         JNIEnv *env, jobject nativeDB)
 {
     sqlite3 *db = gethandle(env, nativeDB);
     if (db)
     {
-        change_progress_handler(env, nativeDB, NULL, 0);
+//        change_progress_handler(env, nativeDB, NULL, 0);
         change_busy_handler(env, nativeDB, NULL);
         clear_commit_listener(env, nativeDB, db);
         clear_update_listener(env, nativeDB);

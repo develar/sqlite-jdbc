@@ -45,7 +45,7 @@ $(SQLITE_UNPACKED): $(SQLITE_ARCHIVE)
 
 $(TARGET)/common-lib/org/sqlite/%.class: src/main/java/org/sqlite/%.java
 	@mkdir -p $(@D)
-	$(JAVAC) -source 1.6 -target 1.6 -sourcepath $(SRC) -d $(TARGET)/common-lib $<
+	$(JAVAC) -source 17 -target 17 -sourcepath $(SRC) -d $(TARGET)/common-lib $<
 
 jni-header: $(TARGET)/common-lib/NativeDB.h
 
@@ -53,6 +53,7 @@ $(TARGET)/common-lib/NativeDB.h: src/main/java/org/sqlite/core/NativeDB.java
 	@mkdir -p $(TARGET)/common-lib
 	$(JAVAC) -d $(TARGET)/common-lib -sourcepath $(SRC) -h $(TARGET)/common-lib src/main/java/org/sqlite/core/NativeDB.java
 	mv target/common-lib/org_sqlite_core_NativeDB.h target/common-lib/NativeDB.h
+	sed -i '' 's/Java_org_sqlite_/Java_org_jetbrains_sqlite_/g' target/common-lib/NativeDB.h
 
 test:
 	mvn test
@@ -69,33 +70,32 @@ $(SQLITE_OUT)/sqlite3.o : $(SQLITE_UNPACKED)
 	    $(SQLITE_SOURCE)/sqlite3.c > $(SQLITE_OUT)/sqlite3.c.tmp
 # register compile option 'JDBC_EXTENSIONS'
 # limits defined here: https://www.sqlite.org/limits.html
+# See https://www.sqlite.org/compile.html
 	perl -p -e "s/^(static const char \* const sqlite3azCompileOpt.+)$$/\1\n\n\/* This has been automatically added by sqlite-jdbc *\/\n  \"JDBC_EXTENSIONS\",/;" \
 	    $(SQLITE_OUT)/sqlite3.c.tmp > $(SQLITE_OUT)/sqlite3.c
 	cat src/main/ext/*.c >> $(SQLITE_OUT)/sqlite3.c
 	$(CC) -o $@ -c $(CCFLAGS) \
-	    -DSQLITE_ENABLE_LOAD_EXTENSION=1 \
+	    -DSQLITE_DQS=1 \
+	    -DSQLITE_THREADSAFE=1 \
+	    -DSQLITE_DEFAULT_MEMSTATUS=0 \
+	    -DSQLITE_DEFAULT_WAL_SYNCHRONOUS=1 \
+	    -DSQLITE_LIKE_DOESNT_MATCH_BLOBS \
+	    -DSQLITE_MAX_EXPR_DEPTH=0 \
+	    -DSQLITE_OMIT_DECLTYPE \
+	    -DSQLITE_OMIT_DEPRECATED \
+	    -DSQLITE_OMIT_PROGRESS_CALLBACK \
+	    -DSQLITE_OMIT_SHARED_CACHE \
+	    -DSQLITE_USE_ALLOCA \
+	    -DSQLITE_OMIT_AUTOINIT \
 	    -DSQLITE_HAVE_ISNAN \
 	    -DHAVE_USLEEP=1 \
-	    -DSQLITE_ENABLE_COLUMN_METADATA \
+	    -DSQLITE_TEMP_STORE=2 \
+	    -DSQLITE_DEFAULT_CACHE_SIZE=2000 \
 	    -DSQLITE_CORE \
-	    -DSQLITE_ENABLE_FTS3 \
-	    -DSQLITE_ENABLE_FTS3_PARENTHESIS \
 	    -DSQLITE_ENABLE_FTS5 \
 	    -DSQLITE_ENABLE_RTREE \
 	    -DSQLITE_ENABLE_STAT4 \
-	    -DSQLITE_ENABLE_DBSTAT_VTAB \
-	    -DSQLITE_ENABLE_MATH_FUNCTIONS \
-	    -DSQLITE_THREADSAFE=1 \
-	    -DSQLITE_DEFAULT_MEMSTATUS=0 \
-	    -DSQLITE_DEFAULT_FILE_PERMISSIONS=0666 \
-	    -DSQLITE_MAX_VARIABLE_NUMBER=250000 \
 	    -DSQLITE_MAX_MMAP_SIZE=1099511627776 \
-	    -DSQLITE_MAX_LENGTH=2147483647 \
-	    -DSQLITE_MAX_COLUMN=32767 \
-	    -DSQLITE_MAX_SQL_LENGTH=1073741824 \
-	    -DSQLITE_MAX_FUNCTION_ARG=127 \
-	    -DSQLITE_MAX_ATTACHED=125 \
-	    -DSQLITE_MAX_PAGE_COUNT=4294967294 \
 	    $(SQLITE_FLAGS) \
 	    $(SQLITE_OUT)/sqlite3.c
 
@@ -116,6 +116,9 @@ NATIVE_DLL:=$(NATIVE_DIR)/$(LIBNAME)
 
 # For cross-compilation, install docker. See also https://github.com/dockcross/dockcross
 native-all: native win32 win64 win-armv7 win-arm64 mac64-signed mac-arm64-signed linux32 linux64 freebsd32 freebsd64 freebsd-arm64 linux-arm linux-armv6 linux-armv7 linux-arm64 linux-android-arm linux-android-arm64 linux-android-x86 linux-android-x64 linux-ppc64 linux-musl32 linux-musl64 linux-musl-arm64
+
+#native-all-desktop: mac64 mac-arm64 native win64 win-arm64 linux64 linux-arm linux-arm64 freebsd64 freebsd-arm64
+native-all-desktop: mac64 native win64 win-arm64 linux64 linux-arm linux-arm64 freebsd64 freebsd-arm64
 
 native: $(NATIVE_DLL)
 
@@ -233,3 +236,40 @@ docker-linux-musl32:
 
 docker-linux-musl64:
 	docker build -f docker/Dockerfile.alpine-linux_x86_64 -t xerial/alpine-linux-x86_64 .
+
+archive-native:
+	rm -rf target/sqlite-native target/sqlite-native.jar
+	mkdir -p target/sqlite-native/mac/x86_64
+	mkdir -p target/sqlite-native/mac/aarch64
+	mkdir -p target/sqlite-native/win
+	mkdir -p target/sqlite-native/linux
+
+	cp target/sqlite-3.40.1-Mac-aarch64/libsqliteij.jnilib target/sqlite-native/mac/aarch64/libsqliteij.jnilib
+
+#	cp -r src/main/resources/org/sqlite/native/Windows/aarch64/ target/sqlite-native/win/aarch64
+#	cp -r src/main/resources/org/sqlite/native/Windows/x86_64/ target/sqlite-native/win/x86_64
+#
+#	cp -r src/main/resources/org/sqlite/native/Linux/aarch64/ target/sqlite-native/linux/aarch64
+#	cp -r src/main/resources/org/sqlite/native/Linux/x86_64/ target/sqlite-native/linux/x86_64
+
+	sh ./native-checksum.sh
+
+	cd target && zip -r sqlite-native.jar sqlite-native -x "*.DS_Store"
+
+install-native: archive-native
+	mvn install:install-file -DgroupId=org.sqlite \
+      -DartifactId=native \
+      -Dversion=3.40.0-3 \
+      -Dpackaging=jar \
+      -Dfile=target/sqlite-native.jar \
+      -DrepositoryId=space-intellij-dependencies \
+      -Durl=https://packages.jetbrains.team/maven/p/ij/intellij-dependencies
+
+deploy-native:
+	mvn deploy:deploy-file -DgroupId=org.sqlite \
+      -DartifactId=native \
+      -Dversion=3.40.0-2 \
+      -Dpackaging=jar \
+      -Dfile=target/sqlite-native.jar \
+      -DrepositoryId=space-intellij-dependencies \
+      -Durl=https://packages.jetbrains.team/maven/p/ij/intellij-dependencies

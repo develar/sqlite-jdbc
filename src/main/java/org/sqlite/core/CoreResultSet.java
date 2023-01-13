@@ -15,11 +15,12 @@
  */
 package org.sqlite.core;
 
+import org.sqlite.SQLiteConnectionConfig;
+
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
-import org.sqlite.SQLiteConnectionConfig;
 
 /** Implements a JDBC ResultSet. */
 public abstract class CoreResultSet implements Codes {
@@ -119,7 +120,7 @@ public abstract class CoreResultSet implements Codes {
     public void checkMeta() throws SQLException {
         checkCol(1);
         if (meta == null) {
-            meta = stmt.pointer.safeRun(DB::column_metadata);
+            //meta = stmt.pointer.safeRun(DB::column_metadata);
         }
     }
 

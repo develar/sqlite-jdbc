@@ -15,21 +15,15 @@
  */
 package org.sqlite.core;
 
+import org.sqlite.*;
+
+import java.nio.ByteBuffer;
 import java.sql.BatchUpdateException;
 import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.sqlite.BusyHandler;
-import org.sqlite.Collation;
-import org.sqlite.Function;
-import org.sqlite.ProgressHandler;
-import org.sqlite.SQLiteCommitListener;
-import org.sqlite.SQLiteConfig;
-import org.sqlite.SQLiteErrorCode;
-import org.sqlite.SQLiteException;
-import org.sqlite.SQLiteUpdateListener;
 
 /*
  * This class is the interface to SQLite. It provides some helper functions
@@ -404,36 +398,6 @@ public abstract class DB implements Codes {
     /**
      * @param stmt Pointer to the statement.
      * @param col Number of column.
-     * @return Declared type of the table column for prepared statement.
-     * @throws SQLException
-     * @see <a
-     *     href="http://www.sqlite.org/c3ref/column_decltype.html">http://www.sqlite.org/c3ref/column_decltype.html</a>
-     */
-    public abstract String column_decltype(long stmt, int col) throws SQLException;
-
-    /**
-     * @param stmt Pointer to the statement.
-     * @param col Number of column.
-     * @return Original text of column name which is the declared in the CREATE TABLE statement.
-     * @throws SQLException
-     * @see <a
-     *     href="http://www.sqlite.org/c3ref/column_database_name.html">http://www.sqlite.org/c3ref/column_database_name.html</a>
-     */
-    public abstract String column_table_name(long stmt, int col) throws SQLException;
-
-    /**
-     * @param stmt Pointer to the statement.
-     * @param col The number of column.
-     * @return Name assigned to a particular column in the result set of a SELECT statement.
-     * @throws SQLException
-     * @see <a
-     *     href="http://www.sqlite.org/c3ref/column_name.html">http://www.sqlite.org/c3ref/column_name.html</a>
-     */
-    public abstract String column_name(long stmt, int col) throws SQLException;
-
-    /**
-     * @param stmt Pointer to the statement.
-     * @param col Number of column.
      * @return Value of the column as text data type in the result set of a SELECT statement.
      * @throws SQLException
      * @see <a
@@ -449,7 +413,7 @@ public abstract class DB implements Codes {
      * @see <a
      *     href="http://www.sqlite.org/c3ref/column_blob.html">http://www.sqlite.org/c3ref/column_blob.html</a>
      */
-    public abstract byte[] column_blob(long stmt, int col) throws SQLException;
+    public abstract ByteBuffer column_blob(long stmt, int col) throws SQLException;
 
     /**
      * @param stmt Pointer to the statement.
@@ -829,12 +793,12 @@ public abstract class DB implements Codes {
     public interface ProgressObserver {
         void progress(int remaining, int pageCount);
     }
-
-    /** Progress handler */
-    public abstract void register_progress_handler(int vmCalls, ProgressHandler progressHandler)
-            throws SQLException;
-
-    public abstract void clear_progress_handler() throws SQLException;
+    //
+    ///** Progress handler */
+    //public abstract void register_progress_handler(int vmCalls, ProgressHandler progressHandler)
+    //        throws SQLException;
+    //
+    //public abstract void clear_progress_handler() throws SQLException;
 
     /**
      * Returns an array describing the attributes (not null, primary key and auto increment) of
@@ -847,7 +811,7 @@ public abstract class DB implements Codes {
      *     index[col][2] = true if column is auto-increment.
      * @throws SQLException
      */
-    abstract boolean[][] column_metadata(long stmt) throws SQLException;
+    //abstract boolean[][] column_metadata(long stmt) throws SQLException;
 
     // COMPOUND FUNCTIONS ////////////////////////////////////////////
 
@@ -861,7 +825,7 @@ public abstract class DB implements Codes {
     public final synchronized String[] column_names(long stmt) throws SQLException {
         String[] names = new String[column_count(stmt)];
         for (int i = 0; i < names.length; i++) {
-            names[i] = column_name(stmt, i);
+            //names[i] = column_name(stmt, i);
         }
         return names;
     }

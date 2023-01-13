@@ -1,4 +1,4 @@
-target
+target/
 *~
 sqlitejdbc/dl
 sqlitejdbc/build
@@ -13,3 +13,4 @@ atlassian-ide-plugin.xml
 .DS_Store
 *.class
 .fleet/settings.json
+src/main/resources/org/sqlite/native/Mac/

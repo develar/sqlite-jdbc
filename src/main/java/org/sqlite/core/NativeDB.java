@@ -16,16 +16,12 @@
 
 package org.sqlite.core;
 
+import org.sqlite.*;
+
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import org.sqlite.BusyHandler;
-import org.sqlite.Collation;
-import org.sqlite.Function;
-import org.sqlite.ProgressHandler;
-import org.sqlite.SQLiteConfig;
-import org.sqlite.SQLiteJDBCLoader;
 
 /** This class provides a thin JNI layer over the SQLite3 C API. */
 public final class NativeDB extends DB {
@@ -180,30 +176,6 @@ public final class NativeDB extends DB {
     @Override
     public synchronized native int column_type(long stmt, int col);
 
-    /** @see org.sqlite.core.DB#column_decltype(long, int) */
-    @Override
-    public synchronized String column_decltype(long stmt, int col) {
-        return utf8ByteBufferToString(column_decltype_utf8(stmt, col));
-    }
-
-    synchronized native ByteBuffer column_decltype_utf8(long stmt, int col);
-
-    /** @see org.sqlite.core.DB#column_table_name(long, int) */
-    @Override
-    public synchronized String column_table_name(long stmt, int col) {
-        return utf8ByteBufferToString(column_table_name_utf8(stmt, col));
-    }
-
-    synchronized native ByteBuffer column_table_name_utf8(long stmt, int col);
-
-    /** @see org.sqlite.core.DB#column_name(long, int) */
-    @Override
-    public synchronized String column_name(long stmt, int col) {
-        return utf8ByteBufferToString(column_name_utf8(stmt, col));
-    }
-
-    synchronized native ByteBuffer column_name_utf8(long stmt, int col);
-
     /** @see org.sqlite.core.DB#column_text(long, int) */
     @Override
     public synchronized String column_text(long stmt, int col) {
@@ -214,7 +186,7 @@ public final class NativeDB extends DB {
 
     /** @see org.sqlite.core.DB#column_blob(long, int) */
     @Override
-    public synchronized native byte[] column_blob(long stmt, int col);
+    public synchronized native ByteBuffer column_blob(long stmt, int col);
 
     /** @see org.sqlite.core.DB#column_double(long, int) */
     @Override
@@ -469,8 +441,8 @@ public final class NativeDB extends DB {
      *     res[col][2] = true if column is auto-increment.
      * @see org.sqlite.core.DB#column_metadata(long)
      */
-    @Override
-    synchronized native boolean[][] column_metadata(long stmt);
+    //@Override
+    //synchronized native boolean[][] column_metadata(long stmt);
 
     // pointer to commit listener structure, if enabled.
     private long commitListener = 0;
@@ -510,13 +482,13 @@ public final class NativeDB extends DB {
         return new String(buff, StandardCharsets.UTF_8);
     }
 
-    /** handler pointer to JNI global progressHandler reference. */
-    private long progressHandler;
-
-    public synchronized native void register_progress_handler(
-            int vmCalls, ProgressHandler progressHandler) throws SQLException;
-
-    public synchronized native void clear_progress_handler() throws SQLException;
+    ///** handler pointer to JNI global progressHandler reference. */
+    //private long progressHandler;
+    //
+    //public synchronized native void register_progress_handler(
+    //        int vmCalls, ProgressHandler progressHandler) throws SQLException;
+    //
+    //public synchronized native void clear_progress_handler() throws SQLException;
 
     /**
      * Getter for native pointer to validate memory is properly cleaned up in unit tests
@@ -545,12 +517,12 @@ public final class NativeDB extends DB {
         return updateListener;
     }
 
-    /**
-     * Getter for native pointer to validate memory is properly cleaned up in unit tests
-     *
-     * @return a native pointer to validate memory is properly cleaned up in unit tests
-     */
-    long getProgressHandler() {
-        return progressHandler;
-    }
+    ///**
+    // * Getter for native pointer to validate memory is properly cleaned up in unit tests
+    // *
+    // * @return a native pointer to validate memory is properly cleaned up in unit tests
+    // */
+    //long getProgressHandler() {
+    //    return progressHandler;
+    //}
 }
